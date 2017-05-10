@@ -1,0 +1,19 @@
+<div class="pixel-palette">
+  <div ng-hide="working"><a ng-click="pickMe($index,$event)" ng-repeat="p in pixels track by $index" class="pixel" ng-style="$color(p)"></a></div>
+  <div ng-show="working">
+    <span ng-include="'tpl/loader.html'"></span>
+    Generating Palette ...
+  </div>
+  <!-- {{status.pickerIsOpen}} -->
+
+  <div class="colorpicker" ng-style="$cp_pos()">
+    <div>
+      <span ng-style="{'background-color':'#'+status.hexColor}" class="pixel-large"></span>
+      <input type="text" ng-value="status.hexColor" id="color-value" />
+    </div>
+    <div>
+      <input type="text" id="color-input" />
+    </div>
+
+  </div>
+</div>
