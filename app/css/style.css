@@ -655,3 +655,33 @@ pre {
 ::-webkit-scrollbar-corner       {
   background-color: transparent;
 }
+
+.preview-overlay {
+  position: fixed;
+  top:0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: #111;
+  padding: 10px;
+}
+
+.preview-overlay .gif-close {
+  padding: 20px;
+}
+.preview-overlay .gif-preview {
+  padding: 20px;
+  height: 80%;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+  box-sizing: border-box;
+  text-align: center;
+}
+
+.preview-overlay .gif-preview img {
+  width: auto;
+  height: auto;
+}

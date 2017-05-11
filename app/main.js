@@ -180,6 +180,16 @@ ipcMain.on('getGifPalette', (event, input, prefs) => {
   });
 });
 
+var ffcmd;
+
+ipcMain.on('killProcess',function(){
+  console.log("kill?");
+  if(ffcmd && typeof ffcmd.kill=='function'){
+    console.log('kill');
+    ffcmd.kill();
+  }
+})
+
 
 ipcMain.on('exportGif', (event, input, output, palette, prefs) => {
   // var palettePath = path.join(app.getPath("temp"), "gif_palette.png");
@@ -206,15 +216,16 @@ function getRawThumbnail(input,seconds,callback){
   // var ff = spawn(ffmpeg_path, ["-ss", (seconds||0), "-i", input,  "-frames:v", 1, "-c:v", "png", "-f", "image2", "pipe:1"]);
 
   // var data = new Buffer();
-  var stream = ffmpeg(input).seekInput(seconds||0).frames(1).videoCodec('png').outputFormat('image2').pipe({end:true});
   var data = [];
-  stream.on('data',function(d){
+  ffmpeg(input)
+  .seekInput(seconds||0).frames(1).videoCodec('png').outputFormat('image2').pipe({end:true})
+  .on('data',function(d){
     data.push(d);
-  });
+  })
   // ff.stderr.on('data',function(d){
   //   console.log(d.toString());
   // });
-  stream.on('end', function(){
+  .on('end', function(){
     callback(null, Buffer.concat(data).toString('base64'));
   });
 }
@@ -245,22 +256,22 @@ function generateGifPalette(input, prefs, callback){
   //   "-f", "image2",
   //   "pipe:1"
   // ]);
-  var ff = ffmpeg(input).videoFilters(vf).videoCodec("png").outputFormat("image2").pipe({end:true});
-
   var data = [];
-  ff.on('data',function(d){
-    data.push(d);
-  });
-  // ff.stderr.on('data',function(d){
-  //   var matches = data.toString().match(/frame=(\s+\d+)/i);
-  //   var frame = matches && matches.length > 1 ? matches[1].trim() : -1;
-  //   console.log(d.toString());
-  //   console.log(frame);
-  //
-  // });
-  ff.on('end', function(){
-    callback(null, Buffer.concat(data).toString('base64'));
-  });
+  ffcmd = ffmpeg(input)
+    .videoFilters(vf).videoCodec("png").outputFormat("image2").pipe({end:true})
+    .on('data',function(d){
+      data.push(d);
+    })
+    .on('end', function(){
+      callback(null, Buffer.concat(data).toString('base64'));
+    });
+    // ff.stderr.on('data',function(d){
+    //   var matches = data.toString().match(/frame=(\s+\d+)/i);
+    //   var frame = matches && matches.length > 1 ? matches[1].trim() : -1;
+    //   console.log(d.toString());
+    //   console.log(frame);
+    //
+    // });
   // read.on('data',function(){
   //   console.log('read data');
   // });
@@ -293,7 +304,7 @@ function getGifThumbnail(input, seconds, prefs, paletteData, callback){
 
   var data = [];
 
-  var output = ffmpeg()
+  ffcmd = ffmpeg()
     .input(input)
     .seekInput(seconds||0)
     .input(aReadableStreamBuffer)
@@ -312,16 +323,17 @@ function getGifThumbnail(input, seconds, prefs, paletteData, callback){
     // })
     .on('error', function(err, stdout, stderr) {
       console.log(err, stdout, stderr);
-    })
-    .pipe({end:true})
+    }).pipe({end:true});
 
-    output.on('data',function(d){
+  ffcmd
+    .on('data',function(d){
       data.push(d);
-    });
-    output.on('end', function(){
+    })
+    .on('end', function(){
       console.log("GIF");
       callback(null, Buffer.concat(data).toString('base64'));
     });
+
     aReadableStreamBuffer.put(Buffer.from(paletteData, 'base64'));
     aReadableStreamBuffer.stop();
 
@@ -348,7 +360,7 @@ function getGifThumbnail(input, seconds, prefs, paletteData, callback){
 }
 
 
-function exportGif(input, output, palette, prefs, progress, callback){
+function exportGif(input, output, paletteData, prefs, progress, callback){
   // var palette = path.join(app.getPath("temp"), "gif_palette.png");
   // var preview = path.join(app.getPath("temp"), "gif_preview.gif");
   var stats = prefs.stats_mode || 'full';
@@ -359,30 +371,66 @@ function exportGif(input, output, palette, prefs, progress, callback){
   var h = prefs.height || 240;
   var scaleCmd = "scale="+w+":"+h;
 
-  var opts = [
-    "-i", input, "-i", "pipe:0",
-    "-lavfi", util.format("fps=%s,%s:flags=lanczos[x];[x][1:v]paletteuse=dither=%s", fps, scaleCmd, dither),
-    "-y", output
-  ];
+  var filters = util.format("fps=%s,%s:flags=lanczos[x];[x][1:v]paletteuse=dither=%s", fps, scaleCmd, dither);
 
-  //input, palette, scaleCmd, dither, preview
-  var ff = spawn(ffmpeg_path, opts);
-  // ff.stdout.on('data',function(data){
-  //   // console.log('stdout');
+  // Initialize stream
+  var aReadableStreamBuffer = new streamBuffers.ReadableStreamBuffer({
+    frequency: 10,      // in milliseconds.
+    chunkSize: 2048     // in bytes.
+  });
+
+  // var opts = [
+  //   "-i", input, "-i", "pipe:0",
+  //   "-lavfi", filters,
+  //   "-y", output
+  // ];
+  console.log("Export", input, output);
+  ffcmd = ffmpeg()
+    .input(input)
+    .input(aReadableStreamBuffer)
+    .complexFilter(filters)
+    .outputFormat("gif")
+    .on('start', function(commandLine) {
+      console.log('Spawned Ffmpeg with command: ' + commandLine);
+    })
+    .on('codecData', function(data) {
+      console.log('Input is ' + data.audio + ' audio ' + 'with ' + data.video + ' video');
+    })
+    .on('end', function() {
+      console.log('Finished processing');
+      console.log("export done");
+      callback();
+    })
+    .on('progress',function(p){
+      console.log("progress", p.frames);
+      progress(p.frames);
+    })
+    .on('error', function(err, stdout, stderr) {
+      console.log(err, stdout, stderr);
+    })
+    .save(output);
+
+    aReadableStreamBuffer.put(Buffer.from(paletteData, 'base64'));
+    aReadableStreamBuffer.stop();
+
+  // //input, palette, scaleCmd, dither, preview
+  // var ff = spawn(ffmpeg_path, opts);
+  // // ff.stdout.on('data',function(data){
+  // //   // console.log('stdout');
+  // // });
+  // ff.stderr.on('data',function(data){
+  //   var matches = data.toString().match(/frame=(\s+\d+)/i);
+  //   var frame = matches && matches.length > 1 ? matches[1].trim() : -1;
+  //   progress(frame);
+  //   // console.log("STDERR", data.toString(), matches, frame);
   // });
-  ff.stderr.on('data',function(data){
-    var matches = data.toString().match(/frame=(\s+\d+)/i);
-    var frame = matches && matches.length > 1 ? matches[1].trim() : -1;
-    progress(frame);
-    // console.log("STDERR", data.toString(), matches, frame);
-  });
-  ff.on('exit',function(code){
-    console.log("export done");
-    callback();
-  });
+  // ff.on('exit',function(code){
+  //   console.log("export done");
+  //   callback();
+  // });
   //write palette to stdin
-  ff.stdin.write(Buffer.from(palette, 'base64'));
-  ff.stdin.end();
+  // ff.stdin.write(Buffer.from(palette, 'base64'));
+  // ff.stdin.end();
 
 
 }

@@ -25,6 +25,11 @@ $(function(){
 });
 
 angular.module('gifwhiz', [])
+.filter('basename', function(){
+  return function(input){
+    return path.basename(input);
+  }
+})
 .filter('framerate', function(){
   return function(input, suffix){
     if(!input){
@@ -642,7 +647,6 @@ angular.module('gifwhiz', [])
   $rootScope.currentTime = 0;
   $scope.numColumns = 1;
 
-
   $scope.widthChange = function(){
     if($rootScope.prefs.width > 0 && $rootScope.prefs.aspect_lock && $scope.currentSource.stream){
       var ratio = $rootScope.currentSource.stream.height/$rootScope.currentSource.stream.width;
@@ -666,6 +670,12 @@ angular.module('gifwhiz', [])
       ipcRenderer.send('exportGif', $rootScope.currentSource.source.file.path, file, $rootScope.colorPalette, $rootScope.prefs);
     });
   }
+
+  $scope.cancelExport = function(){
+    ipcRenderer.send('killProcess');
+    $scope.resetExport();
+  }
+
   $scope.resetExport = function(){
     $rootScope.exportStatus.status = 0;
     $rootScope.exportStatus.frame = 0;
@@ -673,6 +683,16 @@ angular.module('gifwhiz', [])
   }
   $scope.finderReveal = function(){
     shell.showItemInFolder($rootScope.exportStatus.filepath);
+  }
+  $rootScope.previewGifSrc = null;
+  $scope.previewGif = function(){
+    $rootScope.previewGifSrc = $rootScope.exportStatus.filepath;
+    $scope.resetExport();
+  }
+  $scope.closePreview = function(){
+    console.log("CLOSE!");
+    $rootScope.previewGifSrc = null;
+
   }
 
   $scope.promise = $timeout();
@@ -686,6 +706,7 @@ angular.module('gifwhiz', [])
         $scope.promise = $timeout(function(){
 //          $rootScope.currentSource.output.working=true;
           // ipcRenderer.send('getGifThumbnail', $rootScope.currentSource.source.file.path, $rootScope.currentTime, p, $rootScope.colorPalette);
+          ipcRenderer.send('killProcess');
           ipcRenderer.send('getGifPalette', $rootScope.currentSource.source.file.path, $rootScope.prefs);
           console.log("GEN GIF PALETTE");
         },500);
@@ -752,6 +773,8 @@ angular.module('gifwhiz', [])
     $rootScope.currentSource.output.working=true;
     ipcRenderer.send('getGifThumbnail', $rootScope.currentSource.source.file.path, $rootScope.currentTime, $rootScope.prefs, $rootScope.colorPalette);
   });
+
+
   ipcRenderer.on('exportProgress', (event, frame) => {
     $rootScope.exportStatus.frame = frame;
     $rootScope.exportStatus.progress = (frame / $rootScope.exportStatus.totalFrames) * 100;

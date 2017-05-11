@@ -54,13 +54,15 @@
           <div class="form-row">
 
             <div class="form-group">
-              <label>Width</label>
+              <label>Dimensions</label>
               <input type="number" ng-change="widthChange()" min="16" max="2000" ng-model="prefs.width" />
-            </div>
-            <div class="form-group">
-              <label>Height</label>
+              &times;
               <input type="number" ng-change="heightChange()" min="16" max="2000" ng-model="prefs.height" />
             </div>
+            <!-- <div class="form-group">
+              <label>Height</label>
+
+            </div> -->
 
             <div class="form-group">
               <label>Lock Aspect</label>
@@ -168,13 +170,17 @@
               <div class="progress-fill" ng-class="{'progress-success':exportStatus.status==2}" ng-style="{width:exportStatus.progress+'%'}"></div>
             </div>
             <p ng-if="exportStatus.status==1">
-              <button class="btn-default pull-right">Cancel</button>
+              <button ng-click="cancelExport()" class="btn-default pull-right">Cancel</button>
               <span>Writing Frame <strong>{{exportStatus.frame|number:0}}</strong> of <strong>{{exportStatus.totalFrames|number:0}}</strong></span>
             </p>
             <p ng-if="exportStatus.status==2">
-              <button ng-click="resetExport()" class="btn-default pull-right">
+              <button ng-click="resetExport()" class="btn-primary pull-right">
                 <span class="icon-checkmark"></span>
-                Done
+                Close
+              </button>
+              <button ng-click="previewGif()" class="btn-default pull-right">
+                <span class="icon-eye"></span>
+                Preview
               </button>
               <button ng-click="finderReveal()" class="btn-default pull-right">
                 <span class="icon-folder-open"></span>
@@ -189,6 +195,24 @@
 
     </div>
     <div class="drag-overlay" ng-if="dragActive"></div>
+    
+    <div class="preview-overlay" ng-if="previewGifSrc">
+      <div class="gif-close">
+        <button class="btn-primary pull-right" ng-click="closePreview()">
+          <span class="icon-file-video"></span>
+          Close
+        </button>
+        <p>
+          {{previewGifSrc|basename}}
+        </p>
+      </div>
+      <div class="gif-preview">
+        <p>
+          <img ng-src="{{previewGifSrc}}" width="100%" />
+        </p>
+      </div>
+
+    </div>
   </body>
 
   <script>
