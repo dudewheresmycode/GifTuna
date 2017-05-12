@@ -1,11 +1,165 @@
 <!doctype html>
 <html>
+<head>
+  <style>
+  @import url('https://fonts.googleapis.com/css?family=Montserrat:400,600,700,800');
+  @import url('https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css');
+
+  body {
+    font-family: "Montserrat", -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+    /*font-family: "Montserrat", sans-serif;*/
+    margin:0;
+    font-weight: 400;
+    background-color: #EDEDED;
+  }
+  .header {
+    text-align: center;
+    background-color: #202021;
+    box-shadow: inset 0px -5px 20px rgba(0,0,0,0.90);
+    /*position: relative;
+    z-index: 99;*/
+    color: #fff;
+    padding: 60px 0;
+  }
+  a {
+    color: #C35244;
+    font-weight: bold;
+    text-decoration: none;
+  }
+  .header img {
+    height: 128px;
+
+  }
+  .header h1 {
+    font-family: "Montserrat", sans-serif;
+    letter-spacing: 1px;
+    font-weight: 700;
+    color: #ee6352;
+    font-size: 4em;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+    margin: 0;
+    padding: 0;
+  }
+  hr {
+    border: none;
+    height: 1px;
+  }
+  .white {
+    background: #fff;
+    border-top: 1px solid #dadada;
+    border-bottom: 1px solid #dadada;
+  }
+
+  .container {
+    padding: 60px 0;
+    max-width: 1200px;
+    margin: auto;
+    display: flex;
+    flex-direction: row;
+  }
+  .container .flex-col {
+    flex: 0 1 33%;
+    padding: 50px;
+  }
+  .container .flex-col img {
+    display: block;
+    width: 100%;
+  }
+  .container .flex-col p {
+    line-height: 1.5;
+    color: #333;
+  }
+  @media screen and (max-width:640px){
+    .container {
+      flex-direction: column;
+    }
+  }
+  .container .screenshot {
+    flex: 0 1 auto;
+    padding: 0 30px;
+  }
+  .container .screenshot img {
+    width: 100%;
+    min-width: 320px;
+  }
+  .container .download {
+    padding: 30px;
+  }
+  .dl-button {
+    box-sizing: border-box;
+    display: block;
+    width: 100%;
+    margin: 0 0 15px 0;
+    text-align: left;
+    background-color: #939394;
+    padding: 10px 20px;
+    text-decoration: none;
+    color: #202021;
+  }
+  .dl-button:hover {
+    background-color: #B7B7B7;
+  }
+  .dl-button.dl-main {
+    background-color: #ee6352;
+    padding: 20px 20px;
+    font-size: 18px;
+  }
+  </style>
+</head>
 <body>
   <div class="header">
-    <img src="images/giftuna-logo.png" />
+    <img src="images/giftuna-logo.png" height="120" />
+    <h1>GifTuna</h1>
+    <p>
+      A desktop video to gif converter for Mac, Windows and Linux.
+    </p>
   </div>
   <div class="container">
-    
+    <div class="screenshot flex-col">
+      <a href="images/screen-shot-large.png" target="_blank"><img src="images/screen-shot-small.png" /></a>
+    </div>
+    <div class="download flex-col">
+      <a href="#" id="dl-main" class="dl-main dl-button">Download for XXX</a>
+      <h4>All Platforms</h4>
+      <a href="#" class="dl-button"><i class="fa fa-apple fa-fw"></i> Mac OS X</a>
+      <a href="#" class="dl-button"><i class="fa fa-windows fa-fw"></i> Windows 64-bit</a>
+      <a href="#" class="dl-button"><i class="fa fa-linux fa-fw"></i> Linux 64-bit</a>
+    </div>
   </div>
+  <hr />
+  <div class="white">
+    <div class="container">
+      <div class="flex-col">
+        <h3>Customize your color palettes</h3>
+        <img src="images/color-palette.png" />
+        <p>GifTuna lets you tweak individual colors in your palette before exporting to optimize any overly diffused areas.</p>
+      </div>
+      <div class="flex-col">
+        <h3>Powered by FFmpeg</h3>
+        <img src="images/ffmpeg.png" />
+        <p>GifTuna is powered by <a target="_blank" href="http://ffmpeg.org">FFmpeg</a>, which makes it fast and easy to work from high quality video sources.</p>
+      </div>
+      <div class="flex-col">
+        <h3>Export Progress</h3>
+        <img src="images/export.png" />
+        <p>GifTuna is powered by ffmpeg, which makes it fast and easy to work from high quality video sources.</p>
+      </div>
+    </div>
+  </div>
+  <script>
+  var user_os = navigator.platform || navigator.oscpu;
+  var isMac = /mac/gi.test(user_os);
+  var isWindows = /win/gi.test(user_os);
+  var isLinux = /linux/gi.test(user_os);
+  var cl = false;
+  var lbl = false;
+  if(isMac){ cl = 'fa-apple'; lbl='Mac OS'; }
+  if(isWindows){ cl = 'fa-windows'; lbl='Windows'; }
+  if(isLinux){ cl = 'fa-linux'; lbl='Linux'; }
+  if(cl && lbl){
+    document.getElementById("dl-main").innerHTML = '<i class="fa fa-fw '+cl+'"></i> Download for '+lbl;
+  }
+  console.log("isMac %s, isWindows %s, isLinux %s", isMac, isWindows, isLinux);
+  </script>
 </body>
 </html>
