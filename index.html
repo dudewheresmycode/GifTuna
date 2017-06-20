@@ -176,18 +176,17 @@
       $.getJSON("https://api.github.com/repos/dudewheresmycode/GifTuna/releases/latest").done(function (release) {
         var win = release.assets.find(function(it){ return /win32/gi.test(it.name); });
         var mac = release.assets.find(function(it){ return /mac/gi.test(it.name); });
-        console.log(win, mac);
 
-        $("#dl-button-win").attr('href', win).attr('disabled',false);
-        $("#dl-button-mac").attr('href', mac).attr('disabled',false);
+        $("#dl-button-win").attr('href', win.browser_download_url).attr('disabled',false);
+        $("#dl-button-mac").attr('href', mac.browser_download_url).attr('disabled',false);
         if(isMac){
           cl = 'fa-apple';
           lbl='Mac OS';
-          href=mac;
+          href=mac.browser_download_url;
         }else if(isWindows){
           cl = 'fa-windows';
           lbl='Windows';
-          href=win;
+          href=win.browser_download_url;
         }else{
           $("#dl-main").hide();
         }
