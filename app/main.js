@@ -3,89 +3,57 @@ const electron = require('electron')
 const app = electron.app
 // Module to create native browser window.
 const BrowserWindow = electron.BrowserWindow
+const ipcMain = electron.ipcMain;
 
-const path = require('path')
-const url = require('url')
-const exec = require('child_process').exec;
-const spawn = require('child_process').spawn;
+const path = require('path');
+const url = require('url');
 const util = require('util');
 const fs = require('fs');
-const http = require('http'), querystring = require('querystring');
-var ffmpeg = require('fluent-ffmpeg');
-var streamBuffers = require('stream-buffers');
-// var ffmpeg = new FfmpegCommand();
 
-const {ipcMain} = require('electron');
+const spawn = require('child_process').spawn;
+const exec = require('child_process').exec;
+
+const settingsPath = path.join(app.getPath('userData'),'app_db.json');
+const low = require('lowdb');
 
 require('fix-path')();
 
-var ffmpeg_path = null;
-var ffprobe_path = null;
+var which = require('which');
 
-
-function check_ffmpeg(callback){
-  var appData = app.getPath('userData');
-  var custom_path = path.join(appData, "GifTuna", "ffmpeg");
-
-  if(fs.existsSync(custom_path)){
-    callback(null, {ffmpeg:path.join(custom_path, "ffmpeg"), ffprobe:path.join(custom_path, "ffmpeg")});
-    return;
-  }
-  var missing = [];
-  ffmpeg()._getFfmpegPath(function(err, ffmpegPath){
-    if(err){
-      //check in appData
-      console.log('ffmpeg not found!', ffmpegPath);
-      missing.push('ffmpeg');
-    }else{
-      console.log('found ffmpeg!', ffmpegPath);
-    }
-    ffmpeg()._getFfprobePath(function(err, ffprobePath){
-      if(err){
-        console.log('ffprobe not found!', ffprobePath);
-        missing.push('ffprobe');
-      }else{
-        console.log('found ffprobe!', ffprobePath);
-      }
-
-      callback(missing.length > 0 ? missing : null, {ffmpeg:ffmpegPath, ffprobe:ffprobePath});
-    });
-  });
-}
-
-function download_ffmpeg(){
-  var ffbinaries = require('ffbinaries');
-  var platform = ffbinaries.detectPlatform();
-  var dest = __dirname + '/binaries';
-
-  ffbinaries.downloadFiles({components: ['ffprobe'], quiet: true, destination: dest}, function () {
-    console.log('Downloaded binaries for ' + platform + '.');
-  })
-}
-
-
-// //find location on mac
-// exec("type -P ffmpeg", function(e,so,se){
-//   if(so.length > 0){ ffmpeg_path = so.trim(); }
-//   exec("type -P ffprobe", function(e,so,se){
-//     if(so.length > 0){ ffprobe_path = so.trim(); }
-//   });
-// })
-
-
-
-var port = 3136;
+var ffbinaries = require('ffbinaries');
 // Keep a global reference of the window object, if you don't, the window will
 // be closed automatically when the JavaScript object is garbage collected.
 let mainWindow
+let ffmpeg_ps
+let db
 
-function createWindow () {
+// var appData = app.getPath("userData");
+
+function createWindow (needs_ffmpeg) {
   // Create the browser window.
-  mainWindow = new BrowserWindow({width: 950, height: 600, minWidth:800, minHeight:600, titleBarStyle:"hidden-inset"})
+  // mainWindow = new BrowserWindow({width: 800, height: 600})
+  var externalDisplay = electron.screen.getPrimaryDisplay()
+  var width = 800;
+  var height = 600;
+  if (externalDisplay) {
+   width = externalDisplay.bounds.width*0.8;
+   height = externalDisplay.bounds.height*0.8;
+  }
+  mainWindow = new BrowserWindow({
+      // x:windowSettings.x,
+      // y:windowSettings.y,
+      // width: windowSettings.width,
+      // height: windowSettings.height,
+      width:width,
+      height:height,
+      minWidth:800,
+      minHeight:600
+      // titleBarStyle:"hidden"
+  })
 
   // and load the index.html of the app.
   mainWindow.loadURL(url.format({
-    pathname: path.join(__dirname, 'index.html'),
+    pathname: path.join(__dirname, needs_ffmpeg ? 'ffmpeg.html':'index.html'),
     protocol: 'file:',
     slashes: true
   }))
@@ -105,8 +73,28 @@ function createWindow () {
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
+var ffmpeg_path = false;
+var ffprobe_path = false;
+
 app.on('ready', function(){
-  createWindow()
+  db = low(settingsPath);
+  db.defaults({ ffmpeg: {ffmpeg:false, ffprobe:false}, window:{x:0, y:0, width:800, height:600}}).write();
+
+  var ffmpeg_store = db.get('ffmpeg').value();
+  console.log(ffmpeg_store);
+  var opts = {};
+  if(ffmpeg_store.ffmpeg){ opts = {path:path.dirname(ffmpeg_store.ffmpeg)} }
+
+  which('ffmpeg', opts, function (er, ffmpeg) {
+    ffmpeg_path = (!er && ffmpeg) ? ffmpeg : false;
+    var opts = {};
+    if(ffmpeg_store.ffprobe){ opts = {path:path.dirname(ffmpeg_store.ffprobe)} }
+    which('ffprobe', opts, function (er, ffprobe) {
+      ffprobe_path = (!er && ffprobe) ? ffprobe : false;
+      console.log(ffmpeg_path, ffprobe_path);
+      createWindow(!ffmpeg_path || !ffprobe_path);
+    });
+  });
 })
 
 // Quit when all windows are closed.
@@ -126,311 +114,229 @@ app.on('activate', function () {
   }
 })
 
+
+ipcMain.on('install_ffmpeg',function(event,input){
+
+  console.log("INSTALL");
+  var platform = ffbinaries.detectPlatform();
+  var dest = path.join(app.getPath("userData"), "ffmpeg");
+
+  ffbinaries.downloadFiles(['ffmpeg','ffprobe'], {quiet: true, destination: dest}, function () {
+    console.log('Downloaded binaries for ' + platform + '.');
+    ffmpeg_path = dest+"/ffmpeg";
+    ffprobe_path = dest+"/ffprobe";
+
+    db.set('ffmpeg.ffmpeg', ffmpeg_path)
+      .set('ffmpeg.ffprobe', ffprobe_path)
+      .write()
+
+
+      mainWindow.loadURL(url.format({
+        pathname: path.join(__dirname, 'index.html'),
+        protocol: 'file:',
+        slashes: true
+      }))
+
+    // event.sender.send('ffmpeg_installed', platform);
+  });
+
+});
 // In this file you can include the rest of your app's specific main process
 // code. You can also put them in separate files and require them here.
-ipcMain.on('ffmpegCheck', (event, input) => {
-  check_ffmpeg(function(err, paths){
-    if(!err){
-      ffmpeg.setFfmpegPath(paths.ffmpeg);
-      ffmpeg.setFfprobePath(paths.ffprobe);
-    }
-    event.sender.send('ffmpegResult', {error:err, paths:paths});
-  })
-})
-
-
 ipcMain.on('probeInput', (event, input) => {
-  ffmpeg.ffprobe(input,function(err, metadata) {
+  console.log("PROBE", input);
+  exec("'"+ffprobe_path+"' -v quiet -print_format json -show_format -show_streams \""+input+"\"", function(so,se,e) {
+    // console.log(so,se,e);
+    var metadata = JSON.parse(se);
     event.sender.send('probeResult', metadata);
   });
 });
-//
-// http.createServer(function(req,res){
-//   var parts = url.parse(req.url,true);
-//   console.log("GET", parts);
-//   if(parts.query.type=='png'){
-//     res.writeHead(200, {"Content-type":"image/png"});
-//     res.end(fs.readFileSync(parts.query.fp));
-//   }else if(parts.query.type=='gif'){
-//     res.writeHead(200, {"Content-type":"image/gif"});
-//     res.end(fs.readFileSync(parts.query.fp));
-//   }else{
-//     res.writeHead(404, {"Content-type":"text/plain"});
-//     res.end("Nope. Nope... Nope.");
-//   }
-//
-//
-// }).listen(port);
+ipcMain.on('getPalette', (event, input, prefs) => {
+  // console.log(prefs);
+  // var input = prefs.file.input;
+  var w = prefs.dimensions.width || 320;
+  var h = prefs.dimensions.height || 240;
+  var fps = prefs.fps || 24;
+  var stats = prefs.color.stats_mode || 'full';
+  var colors = prefs.color.colors || 256;
+  var transparency = (prefs.color.alpha?1:0) || 0;
 
-ipcMain.on('getRawThumbnail', (event, input, seconds) => {
-  getRawThumbnail(input, seconds, function(err,url){
-    event.sender.send('rawThumbnail', url);
-  });
-});
-
-ipcMain.on('getGifThumbnail', (event, input, seconds, prefs, paletteData) => {
-  console.log("PREFS", prefs);
-  getGifThumbnail(input, seconds, prefs, paletteData, function(err, data){
-    event.sender.send('gifThumbnail', {data:data});
-  });
-});
-ipcMain.on('getGifPalette', (event, input, prefs) => {
-  generateGifPalette(input, prefs, function(err, data){
-    event.sender.send('gifPalette', {data:data});
-  });
-});
-
-var ffcmd;
-
-ipcMain.on('killProcess',function(){
-  console.log("kill?");
-  if(ffcmd && typeof ffcmd.kill=='function'){
-    console.log('kill');
-    ffcmd.kill();
-  }
-})
-
-
-ipcMain.on('exportGif', (event, input, output, palette, prefs) => {
-  // var palettePath = path.join(app.getPath("temp"), "gif_palette.png");
-  // fs.writeFileSync(palettePath, palette.split('base64,')[1], 'base64');
-
-  exportGif(
-    input,
-    output,
-    palette,
-    prefs,
-    function(frame){
-      console.log('export progress', frame);
-      event.sender.send('exportProgress', frame);
-    },
-    function(){
-      event.sender.send('exportComplete', output);
-    }
-  );
-
-});
-
-function getRawThumbnail(input,seconds,callback){
-
-  // var ff = spawn(ffmpeg_path, ["-ss", (seconds||0), "-i", input,  "-frames:v", 1, "-c:v", "png", "-f", "image2", "pipe:1"]);
-
-  // var data = new Buffer();
-  var data = [];
-  ffmpeg(input)
-  .seekInput(seconds||0).frames(1).videoCodec('png').outputFormat('image2').pipe({end:true})
-  .on('data',function(d){
-    data.push(d);
-  })
-  // ff.stderr.on('data',function(d){
-  //   console.log(d.toString());
-  // });
-  .on('end', function(){
-    callback(null, Buffer.concat(data).toString('base64'));
-  });
-}
-
-
-
-function generateGifPalette(input, prefs, callback){
-  // var palette = path.join(app.getPath("temp"), "gif_palette.png");
-  var stats = prefs.stats_mode || 'full';
-  var colors = prefs.colors || 256;
-  var w = prefs.width || 320;
-  var h = prefs.height || 240;
-  var fps = prefs.fps || 10;
-  var transparency = (prefs.transparency?1:0) || 0;
-  //var scaleCmd = "scale=iw*min("+w+"/iw\,"+h+"/ih):ih*min("+w+"/iw\,"+h+"/ih),pad="+w+":"+h+":("+w+"-iw)/2:("+h+"-ih)/2";
   var scaleCmd = "scale="+w+":"+h;
-  // var cmd = util.format("ffmpeg -i \"%s\" -vf \"fps=%s,%s:flags=lanczos,palettegen=stats_mode=%s:max_colors=%s\" pipe:1", input, fps, scaleCmd, stats, colors);
+
   var vf = util.format("fps=%s,%s:flags=lanczos,palettegen=stats_mode=%s:max_colors=%s:reserve_transparent=%s", fps, scaleCmd, stats, colors, transparency);
-  // console.log("------");
-  // console.log("VIDEO FILTER", vf);
-  // console.log("------");
-  // var read = fs.createReadStream(input);
-  // var ff = spawn(ffmpeg_path, [
-  //   "-i", input,
-  //   "-vf", vf,
-  //   // '-loglevel', 'debug',
-  //   "-c:v", "png",
-  //   "-f", "image2",
-  //   "pipe:1"
-  // ]);
+
+  if(ffmpeg_ps) ffmpeg_ps.kill();
+
+  ffmpeg_ps = spawn(ffmpeg_path, ["-i", input, "-vf", vf, "-f", "image2", "-vcodec", "png", "pipe:1"])
   var data = [];
-  ffcmd = ffmpeg(input)
-    .videoFilters(vf).videoCodec("png").outputFormat("image2").pipe({end:true})
-    .on('data',function(d){
-      data.push(d);
-    })
-    .on('end', function(){
-      callback(null, Buffer.concat(data).toString('base64'));
-    });
-    // ff.stderr.on('data',function(d){
-    //   var matches = data.toString().match(/frame=(\s+\d+)/i);
-    //   var frame = matches && matches.length > 1 ? matches[1].trim() : -1;
-    //   console.log(d.toString());
-    //   console.log(frame);
-    //
-    // });
-  // read.on('data',function(){
-  //   console.log('read data');
-  // });
-  // read.on('end',function(){
-  //   console.log('read done');
-  // });
-  // read.pipe(ff.stdin);
-
-  // exec(cmd, function(e, so, se){
-  //   callback(null, fs.readFileSync(palette).toString('base64'));
-  // });
-}
-
-
-
-function getGifThumbnail(input, seconds, prefs, paletteData, callback){
-
-
-  var dither = prefs.dither_mode || 'none';
-  var w = prefs.width || 320;
-  var h = prefs.height || 240;
-  var fps = prefs.fps || 30;
-
-  // Initialize stream
-  var aReadableStreamBuffer = new streamBuffers.ReadableStreamBuffer({
-    frequency: 10,      // in milliseconds.
-    chunkSize: 2048     // in bytes.
+  ffmpeg_ps.stdout.on('data',function(d){
+    data.push(d);
   });
-  var scaleCmd = "scale="+w+":"+h;
+  ffmpeg_ps.stderr.on('data',function(d){
+    // console.log("stderr",d.toString());
+  });
+  ffmpeg_ps.on('close',function(){
+    event.sender.send('paletteResult', Buffer.concat(data).toString('base64'));
+  });
+})
+ipcMain.on('cancelProcess', (event) => {
+  if(ffmpeg_ps){
+    ffmpeg_ps.kill();
+  }
+});
+ipcMain.on('getThumbnail', (event, input, palette, time, settings) => {
 
+  // .frames(1)
+// .duration(1)
+// .complexFilter("fps="+fps+","+scaleCmd+":flags=lanczos[x];[x][1:v]paletteuse=dither="+dither)
+  // .outputFormat("gif")
+  // var settings = {fps:30,dither:'true'};
+  // var gif = "fps="+settings.fps+",flags=lanczos[x];[x][1:v]paletteuse=dither="+settings.dither;
+  var w = settings.dimensions.width || 320;
+  var h = settings.dimensions.height || 240;
+  var scaleCmd = "scale="+w+":"+h;
+  var dither = settings.color.dither ? ('bayer:bayer_scale='+settings.color.dither_scale) : 'none';
+  var vf = util.format("fps=24,%s:flags=lanczos [x];[x][1:v]paletteuse=dither=%s", scaleCmd, dither);
+  if(ffmpeg_ps) ffmpeg_ps.kill();
+  ffmpeg_ps = spawn(ffmpeg_path, [
+    "-ss", time,
+    "-i", input,
+    "-i", "pipe:0",
+    "-t", 1,
+    "-lavfi", vf,
+    "-frames:v", 1,
+    "-an", "-f", "image2",
+    "-vcodec", "gif", "pipe:1"
+  ])
   var data = [];
-
-  ffcmd = ffmpeg()
-    .input(input)
-    .seekInput(seconds||0)
-    .input(aReadableStreamBuffer)
-    .frames(1)
-    .duration(1)
-    .complexFilter("fps="+fps+","+scaleCmd+":flags=lanczos[x];[x][1:v]paletteuse=dither="+dither)
-    .outputFormat("gif")
-    .on('start', function(commandLine) {
-        console.log('Spawned Ffmpeg with command: ' + commandLine);
-    })
-    .on('codecData', function(data) {
-      console.log('Input is ' + data.audio + ' audio ' + 'with ' + data.video + ' video');
-    })
-    // .on('end', function() {
-    //   console.log('Finished processing');
-    // })
-    .on('error', function(err, stdout, stderr) {
-      console.log(err, stdout, stderr);
-    }).pipe({end:true});
-
-  ffcmd
-    .on('data',function(d){
-      data.push(d);
-    })
-    .on('end', function(){
-      console.log("GIF");
-      callback(null, Buffer.concat(data).toString('base64'));
-    });
-
-    aReadableStreamBuffer.put(Buffer.from(paletteData, 'base64'));
-    aReadableStreamBuffer.stop();
-
-  // var ff = spawn(ffmpeg_path, [
-  //   "-ss", (seconds||0),
-  //   "-i", input,
-  //   "-i", "pipe:0",
-  //   "-frames:v", 1,
-  //   "-t", 1,
-  //   "-lavfi",
-  //   "fps="+fps+","+scaleCmd+":flags=lanczos[x];[x][1:v]paletteuse=dither="+dither,
-  //   "-f","gif",
-  //   "pipe:1"
-  // ]);
-  //
-
-  // ff.stderr.on('data',function(d){
-  //   // console.log(d.toString());
-  // });
-  //write palette to stdin
-  // ff.stdin.write(Buffer.from(paletteData, 'base64'));
-  // ff.stdin.end();
-
-}
-
-
-function exportGif(input, output, paletteData, prefs, progress, callback){
-  // var palette = path.join(app.getPath("temp"), "gif_palette.png");
-  // var preview = path.join(app.getPath("temp"), "gif_preview.gif");
-  var stats = prefs.stats_mode || 'full';
-  var dither = prefs.dither_mode || 'none';
-  var colors = prefs.colors || 256;
-  var fps = prefs.fps || 10;
-  var w = prefs.width || 320;
-  var h = prefs.height || 240;
-  var scaleCmd = "scale="+w+":"+h;
-
-  var filters = util.format("fps=%s,%s:flags=lanczos[x];[x][1:v]paletteuse=dither=%s", fps, scaleCmd, dither);
-
-  // Initialize stream
-  var aReadableStreamBuffer = new streamBuffers.ReadableStreamBuffer({
-    frequency: 10,      // in milliseconds.
-    chunkSize: 2048     // in bytes.
+  ffmpeg_ps.stdout.on('data',function(d){
+    // console.log("stdout",d.toString());
+    data.push(d);
+  });
+  ffmpeg_ps.stderr.on('data',function(d){
+    // console.log("stderr",d.toString());
+  });
+  ffmpeg_ps.on('close',function(){
+    event.sender.send('thumbnailResult', Buffer.concat(data).toString('base64'));
+    console.log('done');
   });
 
-  // var opts = [
-  //   "-i", input, "-i", "pipe:0",
-  //   "-lavfi", filters,
-  //   "-y", output
-  // ];
-  console.log("Export", input, output);
-  ffcmd = ffmpeg()
-    .input(input)
-    .input(aReadableStreamBuffer)
-    .complexFilter(filters)
-    .outputFormat("gif")
-    .on('start', function(commandLine) {
-      console.log('Spawned Ffmpeg with command: ' + commandLine);
-    })
-    .on('codecData', function(data) {
-      console.log('Input is ' + data.audio + ' audio ' + 'with ' + data.video + ' video');
-    })
-    .on('end', function() {
-      console.log('Finished processing');
-      console.log("export done");
-      callback();
-    })
-    .on('progress',function(p){
-      console.log("progress", p.frames);
-      progress(p.frames);
-    })
-    .on('error', function(err, stdout, stderr) {
-      console.log(err, stdout, stderr);
-    })
-    .save(output);
+  ffmpeg_ps.stdin.write(Buffer.from(palette, 'base64'));
+  ffmpeg_ps.stdin.end();
 
-    aReadableStreamBuffer.put(Buffer.from(paletteData, 'base64'));
-    aReadableStreamBuffer.stop();
-
-  // //input, palette, scaleCmd, dither, preview
-  // var ff = spawn(ffmpeg_path, opts);
-  // // ff.stdout.on('data',function(data){
-  // //   // console.log('stdout');
-  // // });
-  // ff.stderr.on('data',function(data){
-  //   var matches = data.toString().match(/frame=(\s+\d+)/i);
-  //   var frame = matches && matches.length > 1 ? matches[1].trim() : -1;
-  //   progress(frame);
-  //   // console.log("STDERR", data.toString(), matches, frame);
+  // exec("ffmpeg -ss "+time+" -i "+input+" -t 1 -frames:v 1 -f image2 -vcodec png -", function(so,se,e) {
+  //   // console.log(so,se,e);
+  //   console.log(so);
+  //   event.sender.send('thumbnailResult', new Buffer(se, 'binary').toString('base64'));
   // });
-  // ff.on('exit',function(code){
-  //   console.log("export done");
-  //   callback();
-  // });
-  //write palette to stdin
-  // ff.stdin.write(Buffer.from(palette, 'base64'));
-  // ff.stdin.end();
+});
+ipcMain.on('exportGif', (event, input, output, palette, settings) => {
+  var stats = settings.color.stats_mode || 'full';
+  var dither = settings.color.dither ? ('bayer:bayer_scale='+settings.color.dither_scale) : 'none';
+  var colors = settings.color.colors || 256;
+  var fps = settings.fps || 10;
+  var w = settings.dimensions.width || 320;
+  var h = settings.dimensions.height || 240;
+  var scaleCmd = "scale="+w+":"+h;
+  var vf = util.format("fps=%s,%s:flags=lanczos [x];[x][1:v]paletteuse=dither=%s", fps, scaleCmd, dither);
+
+  // var filters = util.format("fps=%s,%s:flags=lanczos[x];[x][1:v]paletteuse=dither=%s", fps, scaleCmd, dither);
+  if(ffmpeg_ps) ffmpeg_ps.kill();
+  ffmpeg_ps = spawn(ffmpeg_path, [
+    "-i", input,
+    "-i", "pipe:0",
+    "-lavfi", vf,
+    "-an",
+    "-f", "gif",
+    output
+  ])
+  // var data = [];
+  ffmpeg_ps.stdout.on('data',function(d){
+    console.log("stdout",d.toString());
+    // data.push(d);
+  });
+  ffmpeg_ps.stderr.on('data',function(d){
+    // var time = /time=(\d+)\:(\d+)\:(\d+)\.(\d+)\s+/.exec(d.toString());
+    var progress = parseProgressLine(d.toString());
+    console.log(progress);
+    // if(time && time.length >= 5){
+    if(progress && progress.time){
+      // var time = (parseInt(time[1])*3600) + (parseInt(time[2])*60) + parseFloat(time[3] + "." + time[4]);
+      // var sec = timemarkToSeconds(progress.time);
+      // var size = parseInt(progress.size.replace('kB',''))*1000;
+
+      var progress_obj = {
+        sec: timemarkToSeconds(progress.time),
+        size: progress.size ? parseInt(progress.size.replace('kB',''))*1000 : 0
+      }
+      event.sender.send('export_progress', progress_obj);
+    }
+  });
+  ffmpeg_ps.on('close',function(){
+    // event.sender.send('thumbnailResult', Buffer.concat(data).toString('base64'));
+    event.sender.send('export_finished', getFilesizeInBytes(output));
+    console.log('done');
+  });
+
+  ffmpeg_ps.stdin.write(Buffer.from(palette, 'base64'));
+  ffmpeg_ps.stdin.end();
+
+});
 
 
+
+
+function timemarkToSeconds(timemark) {
+ if (typeof timemark === 'number') {
+   return timemark;
+ }
+
+ if (timemark.indexOf(':') === -1 && timemark.indexOf('.') >= 0) {
+   return Number(timemark);
+ }
+
+ var parts = timemark.split(':');
+
+ // add seconds
+ var secs = Number(parts.pop());
+
+ if (parts.length) {
+   // add minutes
+   secs += Number(parts.pop()) * 60;
+ }
+
+ if (parts.length) {
+   // add hours
+   secs += Number(parts.pop()) * 3600;
+ }
+
+ return secs;
+}
+
+function parseProgressLine(line) {
+  var progress = {};
+
+  // Remove all spaces after = and trim
+  line  = line.replace(/=\s+/g, '=').trim();
+  var progressParts = line.split(' ');
+
+  // Split every progress part by "=" to get key and value
+  for(var i = 0; i < progressParts.length; i++) {
+    var progressSplit = progressParts[i].split('=', 2);
+    var key = progressSplit[0];
+    var value = progressSplit[1];
+
+    // This is not a progress line
+    if(typeof value === 'undefined')
+      return null;
+
+    progress[key] = value;
+  }
+
+  return progress;
+}
+function getFilesizeInBytes(filename) {
+    const stats = fs.statSync(filename)
+    const fileSizeInBytes = stats.size
+    return fileSizeInBytes
 }

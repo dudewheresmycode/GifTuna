@@ -1,0 +1,34 @@
+input[type=range] {
+  -webkit-appearance: none;
+  width: 100%;
+}
+input[type=range]:disabled {
+  opacity: 0.5;
+}
+input[type=range]:focus {
+  outline: none;
+}
+input[type=range]::-webkit-slider-runnable-track {
+  width: 90%;
+  height: 10px;
+  cursor: pointer;
+  background: #222;
+}
+input[type=range]::-webkit-slider-thumb {
+  height: 16px;
+  width: 16px;
+  background: #fff;
+  border-radius: 20px;
+  /*border-top: 10px solid red;*/
+  /*border-right: 10px solid transparent;
+  border-left: 10px solid transparent;
+  border-bottom: 10px solid #fff;*/
+  /*border-radius: 28px;*/
+  /*background: #ffffff;*/
+  cursor: pointer;
+  -webkit-appearance: none;
+  margin-top: -3px;
+}
+input[type=range]:focus::-webkit-slider-runnable-track {
+  background: #333;
+}

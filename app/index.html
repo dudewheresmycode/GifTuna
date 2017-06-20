@@ -1,220 +1,160 @@
 <!DOCTYPE html>
-<html>
+<html ng-app="giftuna">
   <head>
     <meta charset="UTF-8">
-    <title>Hello World!</title>
-    <link rel="stylesheet" type="text/css" href="css/style.css" />
-    <link rel="stylesheet" type="text/css" href="../node_modules/@claviska/jquery-minicolors/jquery.minicolors.css" />
+    <title>GifTuna</title>
+    <link rel="stylesheet" href="css/style.css" />
+    <link rel="stylesheet" href="css/slider.css" />
   </head>
-  <body ng-app="gifwhiz" ng-controller="main" ng-cloak drag-drop>
-    <div class="container" ng-class="{blur:overlayOn()}">
+  <body ng-controller="gifSettings" ng-cloak>
+    <div class="app">
 
-      <div class="toolbar">
-        <div class="toolbar-left">
-          <div class="info-group">
-            <label>Filename</label>
-            <div class="info-value">{{currentSource.source.file.name}}</div>
+      <div class="section settings-form">
+        <h3 class="section-title">Input File</h3>
+        <div class="form-group">
+          <div class="form-control">
+            <a ng-if="!settings.file.input" class="btn" ng-model="settings.file.input" input-select>Select File</a>
+            <a ng-if="settings.file.input" ng-class="{disabled:status.state>0&&status.state<5}" class="input" href ng-model="settings.file.input" input-select>
+              {{settings.file.input.name}}<span class="change-it">Change</span>
+            </a>
           </div>
-          <div class="info-group">
-            <label>Duration</label>
-            <div class="info-value">{{currentSource.stream.duration|number:1}}s</div>
-          </div>
-
-          <div class="info-group">
-            <label>Framerate</label>
-            <div class="info-value">{{(currentSource.stream.r_frame_rate||currentSource.stream.avg_frame_rate)|framerate:true}}</div>
-          </div>
-          <div class="info-group">
-            <label>Resolution</label>
-            <div class="info-value">{{currentSource.stream.width}}&times;{{currentSource.stream.height}}</div>
-          </div>
-
-          <!-- <button class="btn-default" file-input-button>Select Source</button> -->
         </div>
-        <div class="toolbar-right">
-          <button class="btn-default" ng-class="{active:numColumns==2}" ng-click="numColumns=2" title="2 Up">
-            <span class="icon-layout13"></span>
-          </button>
-          <button class="btn-default" ng-class="{active:numColumns==1}" ng-click="numColumns=1" title="1 Up">
-            <span class="icon-layout8"></span>
-          </button>
-          <button class="btn-default" file-input-button>
-            <span class="icon-file-video"></span> Change Source
-          </button>
-          <button ng-click="export()" class="btn-primary" ng-disabled="!currentSource.thumbnail.output">
-            <span class="icon-floppy-disk"></span>
-            Export GIF
-          </button>
+
+        <h3 class="section-title">Output Options</h3>
+        <div class="form-group form-group-inline">
+          <h5>Dimensions</h5>
+          <div class="form-control">
+            <input type="number" ng-disabled="status.state<5" ng-model="settings.dimensions.width" ng-blur="refreshDimension('width')" ng-change="widthChange()" min="1" />
+            &times;
+            <input type="number" ng-disabled="status.state<5" ng-model="settings.dimensions.height" ng-blur="refreshDimension('height')" ng-change="heightChange()" min="1" />
+          </div>
         </div>
-      </div>
-      <div class="settings">
 
-        <div class="settings-column settings-output">
-          <h5>GIF Settings</h5>
-          <div class="form-row">
+        <div class="form-group form-group-inline">
+          <h5>Lock Aspect</h5>
+          <div class="form-control">
+            <label><input type="checkbox" ng-disabled="status.state<5" ng-model="settings.dimensions.lock" /> {{settings.dimensions.ratio|ratio}}</label>
+          </div>
+        </div>
+        <div class="form-group">
+          <h5>FPS</h5>
+          <div class="form-control">
+            <input type="number" ng-disabled="status.state<5" ng-blur="refreshFps()" ng-model="settings.fps" />
+          </div>
+        </div>
 
-            <div class="form-group">
-              <label>Dimensions</label>
-              <input type="number" ng-change="widthChange()" min="16" max="2000" ng-model="prefs.width" />
-              &times;
-              <input type="number" ng-change="heightChange()" min="16" max="2000" ng-model="prefs.height" />
-            </div>
-            <!-- <div class="form-group">
-              <label>Height</label>
+        <!-- <h6>Color Options</h6> -->
+        <h3 class="section-title">Color Options</h3>
+        <div class="form-group form-group-inline">
+          <h5>Dither</h5>
+          <div class="form-control">
+            <label><input type="checkbox" ng-disabled="status.state<5" ng-model="settings.color.dither" ng-change="refreshThumbnail()" /> {{settings.color.dither?'Yes':'No'}}</label>
+          </div>
+        </div>
+        <div class="form-group form-group-inline">
+          <h5>Dither Grid</h5>
+          <div class="custom-select" ng-class="{disabled:!settings.color.dither||status.state<5}">
+            <select ng-model="settings.color.dither_scale" ng-change="refreshThumbnail()" ng-disabled="!settings.color.dither||status.state<5">
+              <option ng-value="0">0</option>
+              <option ng-value="1">1</option>
+              <option ng-value="2">2</option>
+              <option ng-value="3">3</option>
+              <option ng-value="4">4</option>
+              <option ng-value="5">5</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group form-group-inline">
+          <h5>Palette Mode</h5>
 
-            </div> -->
-
-            <div class="form-group">
-              <label>Lock Aspect</label>
-              <label class="checkbox">
-                <input type="checkbox" ng-model="prefs.aspect_lock" />
-                <span ng-class="{'text-muted':prefs.aspect_lock}">{{prefs.aspect|number:2}} ({{prefs.aspect|ratio}})</span>
-              </label>
-            </div>
-
-            <div class="form-group">
-              <label>FPS</label>
-              <input type="number" min="10" max="240" ng-model="prefs.fps" /><span class="input-addon">fps</span>
-            </div>
-
-          <!-- </div>
-          <div class="form-row"> -->
-
-
-            <div class="form-group">
-              <label>Stats Mode</label>
-              <span class="select"><select ng-options="stats for stats in statsModes" ng-model="prefs.stats_mode"></select></span>
-            </div>
-            <div class="form-group">
-              <label>Dither Mode</label>
-              <span class="select"><select ng-options="dither for dither in ditherModes" ng-model="prefs.dither_mode"></select></span>
-            </div>
-
-            <div class="form-group" ng-if="prefs.dither_mode=='bayer'">
-              <label>Bayer Scale</label>
-              <input type="number" min="0" max="5" ng-model="prefs.bayer_scale" />
-            </div>
-
-
+          <div class="custom-select" ng-class="{disabled:status.state<5}">
+            <select ng-change="refreshPalette()" ng-disabled="status.state<5" ng-model="settings.color.stats_mode">
+              <option value="full">full</option>
+              <option value="diff">diff</option>
+            </select>
           </div>
 
-
+          <!-- <div class="form-control">
+            <label>
+              <input type="radio" ng-model="settings.color.stats_mode" value="full" /> Full
+            </label>
+            <label>
+              <input type="radio" ng-model="settings.color.stats_mode" value="diff" /> Diff
+            </label>
+          </div> -->
         </div>
-        <div class="settings-column settings-palette">
-
+        <p>
+          &nbsp;
+        </p>
+        <div class="form-group">
           <h5>Color Palette</h5>
-          <div class="form-row form-inline">
-
-              <!-- <label>Palette</label> -->
-              <!-- <pre>{{colorPalette}}</pre> -->
-              <!-- <img ng-src="data:image/png;base64,{{colorPalette}}" style="image-rendering: pixelated;" width="100" /> -->
-              <!-- <div class="form-inline"> -->
-                <div class="form-group">
-                  <label>Colors</label>
-                  <input type="range" min="4" max="256" ng-model="prefs.colors" />
-                  <input type="number" min="4" max="256" ng-model="prefs.colors" />
-                </div>
-                <div class="form-group">
-                  <label>&nbsp;</label>
-                  <label class="checkbox">
-                    <input type="checkbox" ng-model="prefs.transparency" />
-                    Alpha Channel
-                  </label>
-                </div>
-
-              <!-- </div> -->
-
-
+          <div class="form-control palette-control">
+            <img class="palette" ng-if="palette!=null" ng-src="data:image/png;base64,{{palette}}" />
           </div>
-          <div class="form-row">
-            <div pixel-palette data-colors="prefs.colors"></div>
+        </div>
+
+        <!-- <pre>{{frames|json}}</pre>
+        <pre>{{settings|json}}</pre> -->
+      </div>
+
+
+      <div class="section preview">
+        <div class="top-header">
+          <div class="scrubber" frame-scrubber data-frames="frames.max" data-disabled="status.state<5" ng-model="frames.current"></div>
+          <div class="export">
+            <a ng-class="{disabled:status.state<5}" ng-click="export()" class="btn btn-primary">Export</a>
+          </div>
+        </div>
+        <!-- <h3 class="section-title">Preview</h3> -->
+        <div class="progress-canvas" ng-if="status.state==4">
+          <div class="progress">
+            <div class="progress-fill" ng-class="{finished:status.export.progress==100}" ng-style="{width:status.export.progress+'%'}"></div>
           </div>
 
-        </div>
-
-
-      </div>
-
-      <div class="canvas">
-        <div class="column column-source" ng-show="numColumns==2">
-          <div source-preview data-title="'Source: '+currentSource.source.file.name" data-working="currentSource.source.working" data-width="currentSource.stream.width" data-height="currentSource.stream.height" data-thumbnail="currentSource.thumbnail.source"></div>
-        </div>
-        <div class="column column-output" ng-class="{'column-solo':numColumns==1}">
-          <!-- <div class="preview-header"> -->
-            <!-- GIF -->
-            <!-- <div class="pull-right"> -->
-              <!-- <input type="range" id="zoom-output" /> -->
-              <!-- {{zoom.output*100|number:1}} -->
-              <!-- <span class="select"><select ng-options="zoom.value as zoom.label for zoom in zooms" ng-model="zoom.output"></select></span> -->
-            <!-- </div> -->
-          <!-- </div> -->
-          <div source-preview data-title="'GIF: '+currentSource.source.file.name" data-working="currentSource.output.working" data-width="prefs.width" data-height="prefs.height" data-thumbnail="currentSource.thumbnail.output"></div>
-        </div>
-      </div>
-      <div class="timeline" frame-scrubber data-duration="currentSource.stream.duration" data-framerate="prefs.fps"></div>
-    </div>
-
-    <div class="overlay-bg" ng-show="!currentSource.source.file||exportStatus.status>0">
-      <div class="overlay-body overlay-drag text-center" ng-if="!currentSource.source.file">
-        <p>Select a video file or drag one onto the window</p>
-        <button class="btn-primary btn-lg" file-input-button>
-          <span class="icon-file-video"></span>
-          Select Video File
-        </button>
-      </div>
-
-      <div class="overlay-body" ng-if="exportStatus.status>0">
-
-            <h3>Export {{exportStatus.filename}}</h3>
-            <div class="progress">
-              <div class="progress-fill" ng-class="{'progress-success':exportStatus.status==2}" ng-style="{width:exportStatus.progress+'%'}"></div>
+          <div class="progress-info">
+            <div class="progress-text" ng-class="{finished:status.export.progress==100}">
+              <span class="progress-text-percent" ng-show="status.export.progress<100">{{status.export.progress|number:1}}%</span>
+              <span ng-if="status.export.progress==100">Complete</span>
+              <span class="progress-text-size">{{status.export.size|filesize}} <span ng-show="status.export.progress<100">written</span></span>
             </div>
-            <p ng-if="exportStatus.status==1">
-              <button ng-click="cancelExport()" class="btn-default pull-right">Cancel</button>
-              <span>Writing Frame <strong>{{exportStatus.frame|number:0}}</strong> of <strong>{{exportStatus.totalFrames|number:0}}</strong></span>
-            </p>
-            <p ng-if="exportStatus.status==2">
-              <button ng-click="resetExport()" class="btn-primary pull-right">
-                <span class="icon-checkmark"></span>
-                Close
-              </button>
-              <button ng-click="previewGif()" class="btn-default pull-right">
-                <span class="icon-eye"></span>
-                Preview
-              </button>
-              <button ng-click="finderReveal()" class="btn-default pull-right">
-                <span class="icon-folder-open"></span>
-                Reveal in Finder
-              </button>
-              <strong class="text-success">Export Complete!</strong>
-            </p>
-            <!-- <pre>{{exportStatus|json}}</pre>             -->
+            <div class="progress-action">
+              <div ng-show="status.export.progress==100">
+                <a href ng-click="reveal()">Show in Finder</a>
+                <a href ng-click="preview()">Preview</a>
+                <a class="btn" href ng-click="exportDone()">Done</a>
+              </div>
+            </div>
           </div>
+
+          <!-- <pre>{{status|json}}</pre> -->
         </div>
-      </div>
+        <div class="progress-canvas" ng-if="status.state > 0 && status.state < 4">
 
-    </div>
-    <div class="drag-overlay" ng-if="dragActive"></div>
-    
-    <div class="preview-overlay" ng-if="previewGifSrc">
-      <div class="gif-close">
-        <button class="btn-primary pull-right" ng-click="closePreview()">
-          <span class="icon-file-video"></span>
-          Close
-        </button>
-        <p>
-          {{previewGifSrc|basename}}
-        </p>
-      </div>
-      <div class="gif-preview">
-        <p>
-          <img ng-src="{{previewGifSrc}}" width="100%" />
-        </p>
-      </div>
+          <div class="progress-canvas-container">
+            <div ng-include="'tpl/loader.html'"></div>
+            <div class="progress-palette" ng-if="status.state==1">
+              <h4>Scanning Input</h4>
+            </div>
+            <div class="progress-palette" ng-if="status.state==2">
+              <h4>Generating Color Palette</h4>
+              <p>This could take a while for longer gifs...</p>
+              <hr />
+              <p><a ng-click="cancel(true)" class="btn">Cancel</a></p>
+            </div>
+            <div class="progress-palette" ng-if="status.state==3">
+              <h4>Generating Preview</h4>
+            </div>
 
+          </div>
+
+        </div>
+        <div class="preview-canvas" ng-if="status.state==5">
+          <img class="preview-img" ng-if="thumbnail!=null" ng-src="{{thumbnail}}" ng-style="{'max-width':settings.dimensions.width+'px'}" />
+        </div>
+        <!-- <div class="preview-canvas" gif-preview></div> -->
+      </div>
     </div>
   </body>
-
   <script>
     // You can also require other files to run in this process
     require('./renderer.js')

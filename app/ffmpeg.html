@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html ng-app="giftuna">
+  <head>
+    <meta charset="UTF-8">
+    <title>GifTuna</title>
+    <link rel="stylesheet" href="css/style.css" />
+    <link rel="stylesheet" href="css/slider.css" />
+  </head>
+  <body ng-controller="installFfmpeg" ng-cloak>
+    <div class="install">
+      <h3>Download &amp; Install FFmpeg</h3>
+      <p>
+        GifTuna uses <a ng-click="ffmpeg_click()" href>ffmpeg</a> under the hood to convert to gif format. Don't fret, we can download this libary for you.
+      </p>
+      <p>&nbsp;</p>
+      <div ng-if="!installing">
+        <p>
+          <a ng-click="quit()" class="btn">Quit</a>
+          <a ng-click="install()" class="btn btn-primary">Download &amp; Install</a>
+        </p>
+      </div>
+      <div ng-if="installing">
+        <p>
+          <div ng-include="'tpl/loader.html'"></div> Installing ffmpeg...
+        </p>
+      </div>
+    </div>
+  </body>
+  <script>
+    // You can also require other files to run in this process
+    require('./renderer.js')
+  </script>
+</html>

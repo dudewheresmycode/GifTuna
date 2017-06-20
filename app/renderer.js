@@ -1,36 +1,256 @@
 // This file is required by the index.html file and will
 // be executed in the renderer process for that window.
 // All of the Node.js APIs are available in this process.
-const {ipcRenderer} = require('electron')
-const {dialog} = require('electron').remote
+
+const electron = require('electron')
+const {ipcRenderer} = electron
+const {dialog} = electron.remote
 const {shell} = require('electron')
-const path = require('path');
 
-global.$ = global.jQuery = require('jquery');
-global.angular = global.angular = require('angular');
+const url = require('url')
+const path = require('path')
 
-// global.$.minicolors = require('@claviska/jquery-minicolors');
-require('@claviska/jquery-minicolors');
+global.jQuery = global.$ = require('jquery');
+global.angular = require('angular');
+
+var app = angular.module('giftuna',[]);
+app.controller('installFfmpeg',function($scope){
 
 
-$(function(){
-  $('body').on('focus', 'input[type=number]', function (e) {
-    $(this).on('mousewheel.disableScroll', function (e) {
-      e.preventDefault()
-    })
-  })
-  $('body').on('blur', 'input[type=number]', function (e) {
-    $(this).off('mousewheel.disableScroll')
-  })
+  $scope.ffmpeg_click = function(){
+    shell.openExternal("http://ffmpeg.org");
+  }
+  $scope.quit = function(){
+    electron.remote.app.quit();
+  }
+  $scope.install = function(){
+    $scope.installing=true;
+    ipcRenderer.send('install_ffmpeg', {});
+  }
+  ipcRenderer.on('ffmpeg_installed',function(ev,data){
+    console.log('ffmpeg_installed');
+    // window.location.href = "/index.html";
+    $scope.installing=false;
+    $scope.$apply();
+  });
+  //open links externally by default
+  // $('a[href^="http"]').on('click',function(event) {
+  //   console.log("A");
+  //   event.preventDefault();
+  //   shell.openExternal(this.href);
+  // });
+
+});
+app.controller('gifSettings',function($scope,$filter,$timeout){
+  $scope.status = {
+    state:0,
+    export:{progress:0,size:0,path:null}
+  }
+  $scope.frames = {
+    current:0,
+    min:0,
+    max:100
+  }
+  $scope.settings = {
+    file: {
+      input:null
+    },
+    dimensions: {
+      original_width:320,
+      original_height:240,
+      width:320,
+      height:240,
+      lock:true
+    },
+    fps:24,
+    color: {
+      stats_mode:"diff",
+      dither:true,
+      dither_scale:2,
+      colors: 256,
+      alpha:false
+    }
+  };
+
+  $scope.settings.dimensions.ratio = $scope.settings.dimensions.original_height/$scope.settings.dimensions.original_width;
+  var prom;
+  $scope.$watch('frames.current',function(nv,ov){
+    if(nv!=ov && $scope.status.state==5){
+      $scope.refreshThumbnail();
+    }
+  });
+
+  $scope.reveal = function(){
+    console.log($scope.status.export.path);
+    shell.showItemInFolder($scope.status.export.path);
+  }
+  $scope.preview = function(){
+    window.open(url.format({
+      pathname: $scope.status.export.path,
+      protocol: 'file:',
+      slashes: true
+    }));
+  }
+  $scope.export = function(){
+    var base = path.parse($scope.settings.file.input.path);
+    var output = path.join(base.dir, base.name+'.gif');
+    dialog.showSaveDialog({title:"Export GIF", defaultPath: output, buttonLabel:"Export"}, function(outputFile){
+      console.log(outputFile);
+      if(outputFile){
+        $scope.status.export = {progress:0, size:0, path:outputFile};
+        $scope.status.state = 4;
+
+        $scope.$apply();
+        ipcRenderer.send('exportGif', $scope.settings.file.input.path, outputFile, $scope.palette, $scope.settings);
+      }
+      // $rootScope.exportStatus.filepath = file;
+      // $rootScope.exportStatus.filename = path.basename(file);
+      // $rootScope.exportStatus.status = 1;
+      // $rootScope.exportStatus.totalFrames = Math.floor($rootScope.currentSource.stream.duration * $rootScope.prefs.fps);
+      // ipcRenderer.send('exportGif', $rootScope.currentSource.source.file.path, file, $rootScope.colorPalette, $rootScope.prefs);
+    });
+  }
+  $scope.widthChange = function(){
+    if($scope.settings.dimensions.width > 0 && $scope.settings.dimensions.lock){
+      var ratio = $scope.settings.dimensions.original_height/$scope.settings.dimensions.original_width;
+      $scope.settings.dimensions.height = Math.round($scope.settings.dimensions.width*ratio);
+    }
+    // if(prom) $timeout.cancel(prom);
+    // prom = $timeout(function(){
+    //   $scope.refreshThumbnail();
+    // },2000);
+  }
+  $scope.heightChange = function(){
+    if($scope.settings.dimensions.height > 0 && $scope.settings.dimensions.lock){
+      var ratio = $scope.settings.dimensions.original_width/$scope.settings.dimensions.original_height;
+      $scope.settings.dimensions.width = Math.round($scope.settings.dimensions.height*ratio);
+    }
+
+  }
+
+  $scope.cancel = function(reset){
+    ipcRenderer.send('cancelProcess', {});
+    if(reset){
+      $scope.status.state=0;
+      $scope.settings.file = {input:null};
+    }
+  }
+  $scope.refreshFps = function(){
+    if($scope.stored.fps != $scope.settings.fps){
+      //$scope.frames.max = Math.floor($scope.settings.probe.duration * $scope.settings.fps);
+      // if($scope.frames.current > $scope.frames.max){
+      //   $scope.frames.current = $scope.frames.max;
+      // }
+      $scope.refreshThumbnail();
+    }
+  }
+  $scope.refreshDimension = function(key){
+
+    if($scope.stored.dimensions[key] != $scope.settings.dimensions[key]){
+      console.log('diff');
+      // if(prom) $timeout.cancel(prom);
+      // prom = $timeout(function(){
+        $scope.refreshThumbnail();
+      // },2000);
+    }
+  }
+  $scope.exportDone = function(){
+    $scope.status.state=5;
+    $scope.status.export = {progress:0, size:0, path:null};
+  }
+  $scope.refreshPalette = function(){
+    console.log('refresh');
+    $scope.thumbnail = null;
+    $scope.palette = null;
+    $scope.cancel();
+
+    $scope.status.state=2;
+    ipcRenderer.send('getPalette', $scope.settings.file.input.path, $scope.settings)
+  }
+  $scope.refreshThumbnail = function(){
+    $scope.thumbnail = null;
+    $scope.status.state=3;
+    var time = $scope.frames.current;
+    ipcRenderer.send('getThumbnail', $scope.settings.file.input.path, $scope.palette, time, $scope.settings)
+  }
+  ipcRenderer.on('export_progress',function(ev,progress){
+    console.log("Progress", progress);
+    var p = (progress.sec/$scope.settings.probe.duration)*100;
+    $scope.status.export.progress = p;
+    $scope.status.export.size = progress.size;
+    $scope.$apply();
+  });
+  ipcRenderer.on('export_finished',function(ev,finalsize){
+    console.log("DONE!");
+    $scope.status.export.progress = 100;
+    $scope.status.export.size = finalsize;
+    // $scope.status.state = 5;
+    $scope.$apply();
+  });
+
+
+  ipcRenderer.on('probeResult', (event, probe) => {
+    console.log(probe);
+    var videoStream = probe.streams.find(function(it){return it.codec_type=='video'; });
+    if(!videoStream){
+      console.error("No video stream found");
+      return;
+    }
+
+    ;
+
+    $scope.frames.max = (Math.floor(videoStream.duration * 10) / 10).toFixed(1) - 0.1; //videoStream ? Math.floor(videoStream.duration * $scope.settings.fps) : 0;
+    $scope.settings.probe = {duration:videoStream.duration, rate:(videoStream.r_frame_rate||videoStream.avg_frame_rate)}
+    $scope.settings.dimensions.width = videoStream.width;
+    $scope.settings.dimensions.height = videoStream.height;
+    $scope.settings.dimensions.original_width = videoStream.width;
+    $scope.settings.dimensions.original_height = videoStream.height;
+    $scope.settings.dimensions.ratio = videoStream.width/videoStream.height;
+
+    $scope.settings.fps = parseInt($filter('framerate')((videoStream.r_frame_rate||videoStream.avg_frame_rate), true));
+
+    //get thumbnail
+    $scope.refreshPalette();
+    // $scope.status.state=2;
+    // ipcRenderer.send('getPalette', $scope.settings.file.input.path, $scope.settings)
+    $scope.$apply();
+  });
+  ipcRenderer.on('paletteResult', (event, paletteResult) => {
+    if($scope.status.state==2){
+      $scope.palette = paletteResult;
+      $scope.status.state=3;
+      var time = $scope.frames.current;
+      ipcRenderer.send('getThumbnail', $scope.settings.file.input.path, $scope.palette, time, $scope.settings)
+      $scope.$apply();
+    }
+  });
+  ipcRenderer.on('thumbnailResult', (event, thumbnailResult) => {
+    $scope.thumbnail = 'data:image/gif;base64,'+thumbnailResult;
+    $scope.status.state=5;
+    $scope.stored = angular.copy($scope.settings);
+    $scope.$apply();
+  });
+
+  $scope.$watch('settings.file.input',function(nv){
+    //reset file input
+    if(nv){
+      $scope.frames.current=0;
+      $scope.status.state=1;
+      $scope.palette = null;
+      $scope.thumbnail = null;
+      ipcRenderer.send('probeInput', nv.path)
+    }
+  });
 });
 
-angular.module('gifwhiz', [])
-.filter('basename', function(){
-  return function(input){
-    return path.basename(input);
+app.filter('filesize',function(){
+  return function(size){
+    var i = Math.floor( Math.log(size) / Math.log(1000) );
+    return size > 0 ? ( size / Math.pow(1000, i) ).toFixed(2) * 1 + ' ' + ['B', 'kB', 'MB', 'GB', 'TB'][i] : '-';
   }
 })
-.filter('framerate', function(){
+
+app.filter('framerate', function(){
   return function(input, suffix){
     if(!input){
       return '-';
@@ -62,166 +282,30 @@ angular.module('gifwhiz', [])
 
   }
 })
-.directive('dragDrop', function($rootScope,$timeout,$parse,$filter){
+
+app.directive('inputSelect',function(){
   return {
-    link: function(scope,ele,attr){
-      var element = ele.get(0);
-      var dragOn = false;
-      var dragged;
-      // document.ondrag = function( event ) {
-      //   console.log('ondrag')
-      // }
-      document.ondragstart = function(e){
-        dragged = event.target;
-        scope.dragActive=true;
-        scope.$apply();
-      }
-      document.ondragend = function(e){
-        scope.dragActive=false;
-        scope.$apply();
-      }
-      document.ondragover = function(e){
-        dragged = event.target;
-        scope.dragActive=true;
-        scope.$apply();
-        event.preventDefault();
-      }
-      window.dragexit = function(e){
-        if(e.target.className==dragged.className){
-          scope.dragActive=false;
-          scope.$apply();
-        }
-      }
-      window.ondragleave = function(e){
-        if(e.target.className==dragged.className){
-          scope.dragActive=false;
-          scope.$apply();
-        }
-      }
+    require:'ngModel',
+    link: function(scope,ele,attr,ngModelCtl){
+      var $file = $("<input type=\"file\" />");
+      $file.on('change',function(e){
+        var file = $(this).get(0).files[0];
+        console.log(file);
+        ngModelCtl.$setViewValue(file);
+        ngModelCtl.$render();
+        $(this).val('');
+      });
 
-      document.ondrop = function(e){
-        e.preventDefault();
-        scope.dragActive=false;
-        var input = e.dataTransfer.files[0];
-        // var input = e.target.files[0];
-        $rootScope.currentTime=0;
-        $rootScope.currentSource.source.file = input;
-        $rootScope.$apply();
-        $rootScope.currentSource.source.working=true;
-        ipcRenderer.send('probeInput', input.path)
-
-
-        return false;
-      }
-
+      ele.on('click',function(e){
+        console.log('click');
+        $file.trigger('click');
+      });
     }
   }
 })
-.directive('pixelPalette', function($rootScope,$timeout,$parse,$filter){
-  return {
-    templateUrl: 'tpl/pixel-palette.html',
-    scope: {
-      src:'=',
-      colors:'='
-      // ngModel:'='
-    },
-    // require:'ngModel',
-
-    link: function(scope,ele,attr){
-      $rootScope.$watch('currentSource.output.generatingPalette',function(nv){
-        scope.working = nv;
-      });
-      // $timeout(function(){
-        $(ele).find('#color-input').minicolors({
-          format:'rgb',
-          inline:true,
-          change: function(value, opacity) {
-            var rgb = $(this).minicolors('rgbObject');
-            $timeout(function() {
-              scope.pixels[scope.status.pixelIndex] = [rgb.r,rgb.g,rgb.b];
-              scope.status.hexColor = RGBToHex(rgb.r,rgb.g,rgb.b);
-
-//              scope.pixels[0];
-              put_palette();
-            });
-            // if(!scope.$$phase) scope.$apply();
-            // console.log(value, opacity, rgb);
-          }
-        });
-      // },0);
-      scope.status = {pickerIsOpen:false, color:null, position:{x:0,y:0}};
-      var RGBToHex = function(r,g,b){
-          var bin = r << 16 | g << 8 | b;
-          return (function(h){
-              return new Array(7-h.length).join("0")+h
-          })(bin.toString(16).toUpperCase())
-      }
-
-      scope.pickMe = function(index,$event){
-        var color = scope.pixels[index];
-        console.log(ele.find(".pixel").eq(index));
-
-        $(ele).find('#color-input').minicolors('value', "rgb("+color.join(',')+")");
-        scope.status.color = "rgb("+color.join(',')+")";
-        scope.status.hexColor = RGBToHex(color[0],color[1],color[2]);
-        scope.status.pixelIndex = index;
-        scope.status.pickerIsOpen = true;
-        scope.status.position.x = ele.find(".pixel").eq(index).offset().left;
-        scope.status.position.y = ele.find(".pixel").eq(index).offset().top + 10;
-        if($event){
-          $event.preventDefault();
-          $event.stopPropagation();
-        }
-      }
-      $rootScope.$on('pixelClick',function(evt,color){
-        console.log("COLOR", color);
-        var idx = scope.pixels.findIndex(function(p){
-          // console.log(p,color);
-          for(var i=0;i<4;i++){
-            if(p[i]!=color[i]) return false;
-          }
-          return true;
-          // return angular.equals(p,color);
-        })
-        console.log("COLOR", evt,color,idx);
-        scope.pickMe(idx);
-
-      });
-      $('.colorpicker').on('click',function(e){
-        // e.preventDefault();
-        e.stopPropagation();
-      });
-      $('body').on('click',function(e){
-        scope.status.pickerIsOpen = false;
-        scope.$apply();
-      });
-      scope.$cp_pos = function(){
-        return {
-          display:scope.status.pickerIsOpen?'block':'none',
-          left:(scope.status.position.x)+'px',
-          top:scope.status.position.y+'px'
-        };
-      }
-
-      var canvas = document.createElement('canvas');
-      var ctx = canvas.getContext('2d');
-      canvas.width = 16;
-      canvas.height = 16;
-      scope.pixels = [];
-      scope.$color = function(c){
-        return {
-          'background-color': "rgb("+c[0]+","+c[1]+","+c[2]+")"
-        }
-      }
-      // scope.$watch('ngModel',function(nv){
-      //   if(nv){
-      //     console.log("Source change", nv);
-      //     read_palette(nv);
-      //   }
-      // });
-      $rootScope.$on('newPalette',function(){
-        read_palette($rootScope.colorPalette);
-      })
+app.directive('pixelPalette', function(){
+return {
+  link: function(scope,ele,attr){
 
       function put_palette(){
         if(scope.pixels.length>0){
@@ -278,518 +362,80 @@ angular.module('gifwhiz', [])
         // }
 
       }
-
     }
   }
 })
-.directive('frameScrubber', function($rootScope,$filter){
+
+
+app.directive('frameScrubber',function(){
   return {
     scope: {
-      duration:'=',
-      // frames:'=',
-      framerate:'='
-      // ngModel:'='
+      ngModel:'=',
+      frames:'=',
+      disabled:'='
     },
-    // require:'ngModel',
-    // template:'<input ng-disabled="!(frames>1)" ng-model-options="{debounce: 200 }" type="range" min="0" ng-model="params.value" />',
-    templateUrl: 'tpl/frame-scrubber.html',
-    link: function(scope,ele,attr){//ngModelCtl
-      scope.$input = $(ele).find('input');
+    template: '<div class="scrubber-frame">{{params.value}}s</div><div class="scrubber-bar"><input ng-disabled="disabled" type="range" step="0.1" ng-model="params.value" min="0" /></div><div class="scrubber-frame">{{params.max+0.1}}s</div>',
+    require: 'ngModel',
+    link: function(scope,ele,attr,ngModelCtl){
       scope.params = {value:0};
-      scope.$next = function(){
-        if(scope.params.value < scope.frames) scope.params.value++;
-      }
-      scope.$prev = function(){
-        if(scope.params.value > 0) scope.params.value--;
-      }
-      scope.$watch('duration',function(nv){
+      var $input = $(ele).find('input');
+      scope.$watch('ngModel',function(nv,ov){
+        if(nv!=ov){
+          scope.params.value = nv;
+        }
+      });
+      scope.$watch('frames',function(nv){
+        console.log('frame change', nv);
         if(nv){
-          scope.frames = Math.floor(nv*scope.framerate);
-          // if(!scope.frames){
-          //   // var fr = scope.framerate.split('/');
-          //   // var rate = (parseInt(fr[0])/parseInt(fr[1]));
-          //   // var rate = $filter('framerate')(scope.framerate);
-          //   var rate =
-          //   scope.frames = Math.ceil(nv*rate);
-          // }
-          scope.$input.attr('max',scope.frames);
-          //scope.params.frames = nv*1000;
+          scope.params.max = nv;
+          $input.attr('max',nv);
         }
-      })
-      scope.$watch('params.value', function(frame){
-
-        var seekTime = 0;
-        if(frame > 0){
-          // var fr = scope.framerate.split('/');
-          // var rate = (parseInt(fr[0])/parseInt(fr[1]));
-          seekTime = frame/scope.framerate;
-        }
-        $rootScope.currentTime=seekTime;
-        if($rootScope.currentSource.source.file){
-          $rootScope.currentSource.thumbnail={};
-          $rootScope.currentSource.source.working=true;
-          ipcRenderer.send('getRawThumbnail', $rootScope.currentSource.source.file.path, seekTime);
-          // if(!$rootScope.currentSource.output.working){
-          $rootScope.currentSource.output.working=true;
-          ipcRenderer.send('getGifThumbnail', $rootScope.currentSource.source.file.path, seekTime, $rootScope.prefs, $rootScope.colorPalette);
-          // }
-        }
-        // ngModelCtl.$setViewValue(frame);
-        // ngModelCtl.$render();
+      });
+      $input.on('change',function(e){
+        console.log('change!');
+        ngModelCtl.$setViewValue(scope.params.value);
+        ngModelCtl.$render();
       });
     }
   }
 })
-.directive('sourcePreview', function($rootScope,$timeout){
+app.directive('gifPreview',function(){
   return {
-    scope: {
-      title: '=',
-      width: '=',
-      height: '=',
-      thumbnail: '=',
-      working: '='
-    },
-    //template: '<div class="preview-container" ng-style="$contain()"><div class="preview" ng-style="$style()"></div></div>',
-    templateUrl:'tpl/source-preview.html',
+    // template: '<div class="preview-div" ng-style="$previewStyle()"></div>',
+    template: '<img src="" />',
     link: function(scope,ele,attr){
-
-      var prom = $timeout();
-      var $content = ele.find(".preview-content");
-      scope.hasScrolled=false;
-      scope.hasScrolls = false;
-      scope.zooms = [
-        {value:0, label:'Fit'},
-        {value:0.25, label:'25%'},
-        {value:0.5, label:'50%'},
-        {value:0.75, label:'75%'},
-        {value:1, label:'100%'},
-        {value:1.5, label:'150%'},
-        {value:2, label:'200%'},
-        {value:3, label:'300%'},
-        {value:4, label:'400%'},
-        {value:5, label:'500%'},
-        {value:10, label:'1000%'}
-      ];
-      scope.zoom = 1;
-
-
-      scope.$zoom = function(inout){
-        var nearest = scope.zooms.findIndex(function(v,idx){
-          return (v.value >= scope.currentScale);
-        });
-        if(!inout){
-          nearest = nearest > -1 ? nearest-1 : nearest;
-          if(nearest > 0){
-            scope.zoom = scope.zooms[nearest].value;
-          }
-        }else{
-          nearest = nearest < scope.zooms.length ? nearest+1 : nearest;
-          scope.zoom = scope.zooms[nearest].value;
-        }
-        console.log('nearest', nearest);
-        // var idx = scope.zooms.findIndex(function(it){ return it.value==scope.zoom; });
-      }
-      scope.$fit = function(){
-        scope.zoom=0;
-      }
-
-      // scope.$pixelClick = function($event){
-      $content.find('.preview').on('click',function(e){
-        var x = Math.round(scope.width*((e.offsetX/$content.width()) / scope.zoom));
-        var y = Math.round(scope.height*((e.offsetY/$content.height()) / scope.zoom));
-        var color = getPixelColor(scope.width,scope.height,x,y);
-        console.log(x, y, color);
-
-        e.preventDefault();
-        e.stopPropagation();
-
-        $rootScope.$emit('pixelClick', color);
-
-
-        function getPixelColor(w,h,x,y){
-          var canvas = document.createElement('canvas');
-          canvas.width = w; canvas.height = h;
-          var ctx = canvas.getContext('2d');
-          var img = new Image();
-          img.src = scope.thumbnail;
-          ctx.drawImage(img,0,0);
-          return ctx.getImageData(x,y,1,1).data;
-          // return d.slice(0,3);
-        }
-      });
-      // $rootScope.zooms = ['Fit','25%','50%','100%','200%','300%','400%','500%'];
-      // $rootScope.zoom = {output:'Fit',source:'Fit'};
-
-
-      // $scope.$watch('zoom',function(zoom){
-      //   if(zoom){
-      //
-      //   }
-      // },true);
-
-
-
-
-      var metaKeyOn = false;
-      // var lastScrollTop = 0;
-      //
-      $(window).on('keydown',function(e){
-        if(e.altKey){
-          metaKeyOn=true;
-          // console.log()
-        }
-      })
-      .on('keyup',function(e){
-        // if(e.altKey){
-          metaKeyOn=false;
-          // console.log()
-        // }
-      });
-      $(ele).bind('mousewheel', function(e){
-        if(metaKeyOn){
-          if(e.originalEvent.wheelDelta /120 > 0) {
-              scope.$zoom(true);
-              scope.$apply();
-              //if(scope.zoom < 10) scope.zoom += 0.1; scope.$apply();
-
-          }
-          else{
-            //if(scope.zoom > 0.10) scope.zoom -= 0.1; scope.$apply();
-              scope.$zoom(false);
-              scope.$apply();
-          }
-        }
-      });
-      // var startx = 0, starty=0;
-      // $content.on('scroll', function(e){
-      //   console.log('scroll');
-      //   scope.hasScrolled=true;
-      //   scope.$apply();
+      scope.preview_scale = 1;
+      // $(ele).on('resize',function(e){
+        console.log($(ele).find('.preview-wrap').width());
+        // var aspect = scope.settings.dimensions.height/scope.settings.dimensions.width;
       // });
-      //   console.log(e.metaKey, e.altKey, e.shiftKey);
-      //   if(metaKeyOn){
-      //     e.preventDefault();
-      //     var st = $(this).scrollTop();
-      //     if (st > lastScrollTop){
-      //         // downscroll code
-      //     } else {
-      //        // upscroll code
-      //     }
-      //     lastScrollTop = st;
-      //
-      //     console.log("ALT SCROLL!");
-      //   }
-      //
-      // });
+      scope.$previewStyle = function(){
 
-
-      // $panzoom.parent().on('mousewheel.focal', function( e ) {
-      //   e.preventDefault();
-      //   var delta = e.delta || e.originalEvent.wheelDelta;
-      //   var zoomOut = delta ? delta < 0 : e.originalEvent.deltaY > 0;
-      //   $panzoom.panzoom('zoom', zoomOut, {
-      //     animate: true,
-      //     focal: e
-      //   });
-      // });
-      //
-      $(window).on('resize',function(){
-        // if(scope.zoom==0){
-          // scope.zoom = null;
-          $timeout.cancel(prom);
-          prom = $timeout(function(){
-            scope.zoom = angular.copy(scope.zoom);
-          },500);
-        // }
-        // if(!$rootScope.$$phase) {
-        //   $rootScope.$apply();
-        // }
-      });
-
-      function dimensions(obj,pad){
-        var w = scope.width;
-        var h = scope.height;
-        if(scope.zoom==0){
-          if(scope.width > scope.height){
-            setByWidth(obj);
-            if(obj.height > $content.height()){
-              setByHeight(obj);
-            }
-          }else{
-            setByHeight(obj);
-            if(obj.width > $content.width()){
-              setByWidth(obj);
-            }
-          }
-
-        }else if(scope.zoom > 0){
-
-          scope.currentScale = scope.zoom;
-          obj.width = w*scope.zoom;
-          obj.height = h*scope.zoom;
-          // if(pad){
-          //   obj.padding = '30px 0 0 30px';
-          //   obj.width = obj.width+pad;
-          //   obj.height = obj.height+pad;
-          // }
-        }
-
-        var t = ($content.height()-obj.height)/2;
-        obj.top = (t > 0 ? t : 0)+'px';
-        if((obj.width > $content.width() || obj.height > $content.height())){
-          scope.hasScrolls = true;
-          // if(!scope.hasScrolled){
-          //   $content.scrollTop((obj.height - $content.height())/2);
-          //   $content.scrollLeft((obj.width - $content.width())/2);
-          // }
-        }else{
-          scope.hasScrolls = false;
-          scope.hasScrolled = false;
-        }
-
-        function setByWidth(){
-          scope.currentScale = ($content.width()/scope.width);
-          obj.width = $content.width();
-          obj.height = scope.height * scope.currentScale;
-        }
-        function setByHeight(){
-          scope.currentScale = ($content.height()/scope.height);
-          obj.height = $content.height();
-          obj.width = scope.width * scope.currentScale;
-        }
-        return obj;
-      }
-
-
-      scope.$contain = function(){
-        var obj = {};
-        var w = scope.width;
-        var h = scope.height;
-        // if(w>0 && h>0){
-        //   obj = {
-        //     width: w+'px',
-        //     height: h+'px'
-        //   };
-        //   obj = dimensions(obj);
-        //   var t = (ele.height()-obj.height)/2;
-        //   t = t > 0 ? t : 0;
-        //   // obj['margin-top'] = '-'+t+'px';
-        //   // obj.top = t+'px';
-        // }
-        return obj;
-      }
-
-      scope.$style = function(){
-        //  style="image-rendering: pixelated;"
-        // var z = scope.zoom ? scope.zoom.replace('%','') : null;
-        // z = parseInt(z);
-        var obj = {
-          width:scope.width+'px',
-          height:scope.height+'px',
-          'image-rendering' : scope.zoom > 1 ? "pixelated" : "auto"
-          // 'padding-top': ((scope.height/scope.width)*100).toFixed(2)+'%'
+        return {
+          'background-image':'url('+scope.thumbnail+')',
+          'max-width':scope.settings.dimensions.width+'px',
+          'max-height':scope.settings.dimensions.height+'px'
+          // 'height': (scope.settings.dimensions.height/scope.settings.dimensions.width)*100 + 'vw'
         };
-        if(scope.thumbnail) obj['background-image'] = 'url('+scope.thumbnail+')';
 
-          obj = dimensions(obj);
+        // console.log($(ele).width());
+        // if($(ele).width() < scope.settings.dimensions.width || $(ele).height() < scope.settings.dimensions.height){
+        //   return {
+        //     'width':'100%',
+        //     'max-width':scope.settings.dimensions.width+'px',
+        //     'max-height':scope.settings.dimensions.height+'px',
+        //     'padding-bottom': (scope.settings.dimensions.height/scope.settings.dimensions.width)*100 + '%'
+        //   }
+        // }else{
+        //   return {
+        //     'max-width':scope.settings.dimensions.width+'px',
+        //     'max-height':scope.settings.dimensions.height+'px',
+        //     'padding-bottom': (scope.settings.dimensions.height/scope.settings.dimensions.width)*100 + '%'
+        //     // 'height':scope.settings.dimensions.height+'px'
+        //   }
+        // }
 
-        // obj = dimensions(obj);
-        return obj;
       }
     }
   }
 })
-.directive('fileInputButton', function($rootScope){
-  return {
-    link: function(scope,ele,attr){
-      var file = document.createElement('input');
-      file.type='file';
-      file.accepts = 'video/*,image/*';
-
-      $(file).on('change',function(e){
-        var input = e.target.files[0];
-        $rootScope.currentTime=0;
-        $rootScope.currentSource.source.file = input;
-        $rootScope.$apply();
-        $rootScope.currentSource.source.working=true;
-        ipcRenderer.send('probeInput', input.path)
-
-      });
-      $(ele).on('click',function(e){
-        file.click();
-      });
-    }
-  }
-})
-.controller('main', function($scope,$rootScope,$timeout){
-  $rootScope.currentSource = {thumbnail:{}, source:{file:null, working:false}, output:{working:false}};
-  $rootScope.statsModes = ['full','diff'];
-  $rootScope.ditherModes = ['none','bayer','heckbert','floyd_steinberg','sierra2','sierra2_4a'];
-
-  ipcRenderer.on('ffmpegResult',function(evt,obj){
-    console.log(evt,obj);
-  });
-  ipcRenderer.send('ffmpegCheck');
-
-  // $rootScope.bayerScales = [0,1,2,3,4,5];
-  $rootScope.prefs= {
-    aspect_lock:true,
-    width:null,
-    height:null,
-    stats_mode:'diff',
-    dither_mode:'bayer',
-    transparency: false,
-    bayer_scale:2,
-    colors: 256,
-    fps:24
-  };
-
-  $rootScope.currentTime = 0;
-  $scope.numColumns = 1;
-
-  $scope.widthChange = function(){
-    if($rootScope.prefs.width > 0 && $rootScope.prefs.aspect_lock && $scope.currentSource.stream){
-      var ratio = $rootScope.currentSource.stream.height/$rootScope.currentSource.stream.width;
-      $rootScope.prefs.height = Math.round($rootScope.prefs.width*ratio);
-    }
-  }
-  $scope.heightChange = function(){
-    if($rootScope.prefs.height > 0 && $rootScope.prefs.aspect_lock && $scope.currentSource.stream){
-      var ratio = $rootScope.currentSource.stream.width/$rootScope.currentSource.stream.height;
-      $rootScope.prefs.width = Math.round($rootScope.prefs.height*ratio);
-    }
-  }
-
-  $rootScope.exportStatus = {progress:0, frame:0, status:0, totalFrames:1};
-  $scope.export = function(){
-    dialog.showSaveDialog({title:"Export GIF", defaultPath:'export.gif', buttonLabel:"Export"}, function(file){
-      $rootScope.exportStatus.filepath = file;
-      $rootScope.exportStatus.filename = path.basename(file);
-      $rootScope.exportStatus.status = 1;
-      $rootScope.exportStatus.totalFrames = Math.floor($rootScope.currentSource.stream.duration * $rootScope.prefs.fps);
-      ipcRenderer.send('exportGif', $rootScope.currentSource.source.file.path, file, $rootScope.colorPalette, $rootScope.prefs);
-    });
-  }
-
-  $scope.cancelExport = function(){
-    ipcRenderer.send('killProcess');
-    $scope.resetExport();
-  }
-
-  $scope.resetExport = function(){
-    $rootScope.exportStatus.status = 0;
-    $rootScope.exportStatus.frame = 0;
-    $rootScope.exportStatus.progress = 0;
-  }
-  $scope.finderReveal = function(){
-    shell.showItemInFolder($rootScope.exportStatus.filepath);
-  }
-  $rootScope.previewGifSrc = null;
-  $scope.previewGif = function(){
-    $rootScope.previewGifSrc = $rootScope.exportStatus.filepath;
-    $scope.resetExport();
-  }
-  $scope.closePreview = function(){
-    console.log("CLOSE!");
-    $rootScope.previewGifSrc = null;
-
-  }
-
-  $scope.promise = $timeout();
-  $rootScope.$watch('prefs',function(p){
-    if(p){
-      $rootScope.exportStatus.totalFrames = $rootScope.currentSource.stream ? Math.floor($rootScope.currentSource.stream.duration * $rootScope.prefs.fps) : 0;
-      if($rootScope.currentSource.stream){
-        $rootScope.currentSource.output.working=true;
-        $rootScope.currentSource.output.generatingPalette=true;
-        $timeout.cancel($scope.promise);
-        $scope.promise = $timeout(function(){
-//          $rootScope.currentSource.output.working=true;
-          // ipcRenderer.send('getGifThumbnail', $rootScope.currentSource.source.file.path, $rootScope.currentTime, p, $rootScope.colorPalette);
-          ipcRenderer.send('killProcess');
-          ipcRenderer.send('getGifPalette', $rootScope.currentSource.source.file.path, $rootScope.prefs);
-          console.log("GEN GIF PALETTE");
-        },500);
-      }
-    }
-  },true);
-
-
-
-  ipcRenderer.on('probeResult', (event, probe) => {
-    console.log(event, probe);
-    // var probe = JSON.parse(arg);
-    $rootScope.currentSource.format = probe.format;
-    var vstream = probe.streams.find(function(it){ return it.codec_type=='video'; });
-    if(!vstream){
-      console.error("No video stream found!");
-      return;
-    }
-    $rootScope.prefs.aspect = (vstream.width/vstream.height);
-    $rootScope.currentSource.stream = vstream;
-    $rootScope.exportStatus.totalFrames = ($rootScope.currentSource.stream.duration * $rootScope.prefs.fps);
-    $rootScope.prefs.width = vstream.width;
-    $rootScope.prefs.height = vstream.height;
-
-    $rootScope.$apply();
-    ipcRenderer.send('getRawThumbnail', $rootScope.currentSource.source.file.path, 0)
-    // ipcRenderer.send('getGifPalette', $rootScope.currentSource.source.file.path, $rootScope.prefs);
-    // $rootScope.generatingPalette=true
-    // console.log("GEN GIF PALETTE");
-    $rootScope.currentSource.output.working=true;
-    $rootScope.currentSource.output.generatingPalette=true;
-
-  });
-  ipcRenderer.on('rawThumbnail', (event, resp) => {
-    //var img = new Image();
-    //img.src = 'data:image/jpeg;base64,'+arg;
-    $rootScope.currentSource.thumbnail.source = 'data:image/png;base64,'+resp;
-    // $rootScope.currentSource.thumbnail.source = resp;
-    $rootScope.currentSource.source.working=false;
-    $rootScope.$apply();
-    //$("#source-preview").css('background-image', 'url(data:image/jpeg;base64,'+resp+')');
-  })
-  ipcRenderer.on('gifThumbnail', (event, resp) => {
-    //var img = new Image();
-    //img.src = 'data:image/jpeg;base64,'+arg;
-    console.log("GIF THUMB", event, resp);
-    $rootScope.currentSource.thumbnail.output = 'data:image/gif;base64,'+resp.data;
-    $rootScope.currentSource.output.working=false;
-    // $rootScope.currentSource.thumbnail.output = resp;
-    $rootScope.$apply();
-    //$("#source-preview").css('background-image', 'url(data:image/jpeg;base64,'+resp+')');
-  })
-  ipcRenderer.on('gifPalette', (event, resp) => {
-    // $rootScope.currentSource.thumbnail.palette = 'data:image/png;base64,'+resp.data;
-    // console.log('palette!', resp.data);
-    $rootScope.colorPalette = resp.data;
-    $rootScope.currentSource.output.generatingPalette=false;
-    $rootScope.$emit('newPalette');
-    // $rootScope.$emit('colorPaletteChange');
-    $rootScope.$apply();
-    ipcRenderer.send('getGifThumbnail', $rootScope.currentSource.source.file.path, $rootScope.currentTime, $rootScope.prefs, $rootScope.colorPalette)
-  })
-  $rootScope.$on('colorPaletteChange',function(){
-    $rootScope.currentSource.output.working=true;
-    ipcRenderer.send('getGifThumbnail', $rootScope.currentSource.source.file.path, $rootScope.currentTime, $rootScope.prefs, $rootScope.colorPalette);
-  });
-
-
-  ipcRenderer.on('exportProgress', (event, frame) => {
-    $rootScope.exportStatus.frame = frame;
-    $rootScope.exportStatus.progress = (frame / $rootScope.exportStatus.totalFrames) * 100;
-    $rootScope.$apply();
-  });
-  ipcRenderer.on('exportComplete', (event, resp) => {
-    $rootScope.exportStatus.frame = $rootScope.exportStatus.totalFrames;
-    $rootScope.exportStatus.progress = 100;
-    $rootScope.$apply();
-    $timeout(function(){
-      $rootScope.exportStatus.status = 2;
-    },250);
-  });
-
-  $scope.overlayOn = function(){
-    return !$rootScope.currentSource.source.file||$rootScope.exportStatus.status>0;
-  }
-});
