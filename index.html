@@ -128,11 +128,8 @@
       <h4>All Platforms</h4>
       <a href="#" id="dl-button-mac" class="dl-button"><i class="fa fa-apple fa-fw"></i> Mac OS X</a>
       <a href="#" id="dl-button-win" class="dl-button"><i class="fa fa-windows fa-fw"></i> Windows</a>
+      <a href="#" id="dl-button-linux" class="dl-button"><i class="fa fa-linux fa-fw"></i> Linux 64-bit</a>
 
-      <!-- <a href="https://github.com/dudewheresmycode/GifTuna/releases/latest" class="dl-main" target="_blank"><i class="fa fa-apple fa-fw"></i> Mac OS X</a> -->
-      <!-- <a href="#" class="dl-button"><i class="fa fa-apple fa-fw"></i> Mac OS X</a>
-      <a href="#" class="dl-button"><i class="fa fa-windows fa-fw"></i> Windows 64-bit</a>
-      <a href="#" class="dl-button"><i class="fa fa-linux fa-fw"></i> Linux 64-bit</a> -->
     </div>
   </div>
   <hr />
@@ -182,13 +179,13 @@
         var linux = release.assets.find(function(it){ return /linux/gi.test(it.name); });
 
         if(win){
-          $("#dl-button-win").attr('href', win.browser_download_url).show();
+          $("#dl-button-win").attr('href', win.browser_download_url).css('display','block');
         }
         if(mac){
-          $("#dl-button-mac").attr('href', mac.browser_download_url).show();
+          $("#dl-button-mac").attr('href', mac.browser_download_url).css('display','block');
         }
         if(linux){
-          $("#dl-button-linux").attr('href', mac.browser_download_url).show();
+          $("#dl-button-linux").attr('href', mac.browser_download_url).css('display','block');
         }
 
         //main dl button
@@ -210,37 +207,11 @@
         }
 
         if(isValidOS){
-          $("#dl-main").html('<i class="fa fa-fw '+cl+'"></i> Download for '+lbl).attr('href', href).show();
+          $("#dl-main").html('<i class="fa fa-fw '+cl+'"></i> Download for '+lbl).attr('href', href).css('display','block');
         }else{
           $("#dl-main").hide();
         }
 
-
-        // if(isLinux){ cl = 'fa-linux'; lbl='Linux'; href=linux; }
-
-
-
-          // var asset = release.assets[0];
-          // var downloadCount = 0;
-          // for (var i = 0; i < release.assets.length; i++) {
-          //     downloadCount += release.assets[i].download_count;
-          // }
-          // var oneHour = 60 * 60 * 1000;
-          // var oneDay = 24 * oneHour;
-          // var dateDiff = new Date() - new Date(asset.updated_at);
-          // var timeAgo;
-          // if (dateDiff < oneDay)
-          // {
-          //     timeAgo = (dateDiff / oneHour).toFixed(1) + " hours ago";
-          // }
-          // else
-          // {
-          //     timeAgo = (dateDiff / oneDay).toFixed(1) + " days ago";
-          // }
-          // var releaseInfo = release.name + " was updated " + timeAgo + " and downloaded " + downloadCount.toLocaleString() + " times.";
-          // $(".sharex-download").attr("href", asset.browser_download_url);
-          // $(".release-info").text(releaseInfo);
-          // $(".release-info").fadeIn("slow");
       });
   }
 
