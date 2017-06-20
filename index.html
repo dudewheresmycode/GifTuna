@@ -122,10 +122,12 @@
       <a href="images/gt-demo.gif" target="_blank"><img src="images/gt-demo.gif" /></a>
     </div>
     <div class="download flex-col">
-      <!-- <a href="#" id="dl-main" class="dl-main dl-button">Download for XXX</a> -->
-      <!-- <h4>All Platforms</h4> -->
+      <a href="#" id="dl-main" class="dl-main dl-button">Download for XXX</a>
+      <h4>All Platforms</h4>
+      <a href="#" id="dl-button-mac" class="dl-button"><i class="fa fa-apple fa-fw"></i> Mac OS X</a>
+      <a href="#" id="dl-button-win" class="dl-button"><i class="fa fa-windows fa-fw"></i> Windows</a>
 
-      <a href="https://github.com/dudewheresmycode/GifTuna/releases/latest" class="dl-main" target="_blank"><i class="fa fa-apple fa-fw"></i> Mac OS X</a>
+      <!-- <a href="https://github.com/dudewheresmycode/GifTuna/releases/latest" class="dl-main" target="_blank"><i class="fa fa-apple fa-fw"></i> Mac OS X</a> -->
       <!-- <a href="#" class="dl-button"><i class="fa fa-apple fa-fw"></i> Mac OS X</a>
       <a href="#" class="dl-button"><i class="fa fa-windows fa-fw"></i> Windows 64-bit</a>
       <a href="#" class="dl-button"><i class="fa fa-linux fa-fw"></i> Linux 64-bit</a> -->
@@ -175,6 +177,26 @@
         var win = release.assets.find(function(it){ return /win32/gi.test(it.name); });
         var mac = release.assets.find(function(it){ return /mac/gi.test(it.name); });
         console.log(win, mac);
+
+        $("#dl-button-win").attr('href', win).attr('disabled',false);
+        $("#dl-button-mac").attr('href', mac).attr('disabled',false);
+        if(isMac){
+          cl = 'fa-apple';
+          lbl='Mac OS';
+          href=mac;
+        }else if(isWindows){
+          cl = 'fa-windows';
+          lbl='Windows';
+          href=win;
+        }else{
+          $("#dl-main").hide();
+        }
+        $("#dl-main").html('<i class="fa fa-fw '+cl+'"></i> Download for '+lbl).attr('href', href);
+
+        // if(isLinux){ cl = 'fa-linux'; lbl='Linux'; href=linux; }
+
+
+
           // var asset = release.assets[0];
           // var downloadCount = 0;
           // for (var i = 0; i < release.assets.length; i++) {
