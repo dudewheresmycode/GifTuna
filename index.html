@@ -98,6 +98,7 @@
     padding: 10px 20px;
     text-decoration: none;
     color: #202021;
+    display: none;
   }
   .dl-button:hover {
     background-color: #B7B7B7;
@@ -106,6 +107,7 @@
     background-color: #ee6352;
     padding: 20px 20px;
     font-size: 18px;
+    display: none;
   }
   </style>
 </head>
@@ -173,24 +175,46 @@
   });
 
   function GetLatestReleaseInfo() {
+      var isValidOS=false;
       $.getJSON("https://api.github.com/repos/dudewheresmycode/GifTuna/releases/latest").done(function (release) {
         var win = release.assets.find(function(it){ return /win32/gi.test(it.name); });
         var mac = release.assets.find(function(it){ return /mac/gi.test(it.name); });
+        var linux = release.assets.find(function(it){ return /linux/gi.test(it.name); });
 
-        $("#dl-button-win").attr('href', win.browser_download_url).attr('disabled',false);
-        $("#dl-button-mac").attr('href', mac.browser_download_url).attr('disabled',false);
+        if(win){
+          $("#dl-button-win").attr('href', win.browser_download_url).show();
+        }
+        if(mac){
+          $("#dl-button-mac").attr('href', mac.browser_download_url).show();
+        }
+        if(linux){
+          $("#dl-button-linux").attr('href', mac.browser_download_url).show();
+        }
+
+        //main dl button
         if(isMac){
           cl = 'fa-apple';
           lbl='Mac OS';
           href=mac.browser_download_url;
+          isValidOS=true;
         }else if(isWindows){
           cl = 'fa-windows';
           lbl='Windows';
           href=win.browser_download_url;
+          isValidOS=true;
+        }else if(isLinux){
+          cl = 'fa-linux';
+          lbl='Linux';
+          href=linux.browser_download_url;
+          isValidOS=true;
+        }
+
+        if(isValidOS){
+          $("#dl-main").html('<i class="fa fa-fw '+cl+'"></i> Download for '+lbl).attr('href', href).show();
         }else{
           $("#dl-main").hide();
         }
-        $("#dl-main").html('<i class="fa fa-fw '+cl+'"></i> Download for '+lbl).attr('href', href);
+
 
         // if(isLinux){ cl = 'fa-linux'; lbl='Linux'; href=linux; }
 
