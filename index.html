@@ -136,42 +136,45 @@
   <div class="white">
     <div class="container">
       <div class="flex-col">
+        <i class="fa fa-eyedropper fa-4x"></i>
         <h3>Customize your color palettes</h3>
-        <img src="images/color-palette.png" />
+        <!-- <div class="thumbnail-wrap">
+          <img src="images/palette.jpg" />
+        </div> -->
         <p>GifTuna lets you tweak individual colors in your palette before exporting to optimize any overly diffused areas.</p>
       </div>
       <div class="flex-col">
+        <i class="fa fa-wrench fa-4x"></i>
         <h3>Powered by FFmpeg</h3>
-        <img src="images/ffmpeg.png" />
-        <p>GifTuna is powered by <a target="_blank" href="http://ffmpeg.org">FFmpeg</a>, which makes it fast and easy to work from high quality video sources.</p>
+        <!-- <div class="thumbnail-wrap">
+          <img src="images/ffmpeg.png" />
+        </div> -->
+        <p>GifTuna is powered by <a target="_blank" href="http://ffmpeg.org">FFmpeg</a>, which makes it fast and easy to import just about any type of video.</p>
       </div>
       <div class="flex-col">
-        <h3>Export Progress</h3>
-        <img src="images/export.png" />
-        <p>GifTuna is powered by ffmpeg, which makes it fast and easy to work from high quality video sources.</p>
+        <i class="fa fa-github fa-4x"></i>
+        <h3>Open Source</h3>
+        <p>GifTuna is free (as in beer), and open source project. You're welcome to report bugs or contribute code to the <a href="https://github.com/dudewheresmycode/giftuna">GifTuna repository on Github</a>.</p>
       </div>
     </div>
   </div>
   <script>
-  var user_os = navigator.platform || navigator.oscpu;
-  var isMac = /mac/gi.test(user_os);
-  var isWindows = /win/gi.test(user_os);
-  var isLinux = /linux/gi.test(user_os);
-  var cl = false;
-  var lbl = false;
-  if(isMac){ cl = 'fa-apple'; lbl='Mac OS'; }
-  if(isWindows){ cl = 'fa-windows'; lbl='Windows'; }
-  if(isLinux){ cl = 'fa-linux'; lbl='Linux'; }
-  if(cl && lbl){
-    // document.getElementById("dl-main").innerHTML = '<i class="fa fa-fw '+cl+'"></i> Download for '+lbl;
-  }
-
-  console.log("isMac %s, isWindows %s, isLinux %s", isMac, isWindows, isLinux);
   $(document).ready(function () {
       GetLatestReleaseInfo();
   });
 
   function GetLatestReleaseInfo() {
+
+      var user_os = navigator.platform || navigator.oscpu;
+      var isMac = /mac/gi.test(user_os);
+      var isWindows = /win/gi.test(user_os);
+      var isLinux = /linux/gi.test(user_os);
+      var cl = false;
+      var lbl = false;
+      // if(isMac){ cl = 'fa-apple'; lbl='Mac OS'; }
+      // if(isWindows){ cl = 'fa-windows'; lbl='Windows'; }
+      // if(isLinux){ cl = 'fa-linux'; lbl='Linux'; }
+
       var isValidOS=false;
       $.getJSON("https://api.github.com/repos/dudewheresmycode/GifTuna/releases/latest").done(function (release) {
         var win = release.assets.find(function(it){ return /win32/gi.test(it.name); });
@@ -185,7 +188,7 @@
           $("#dl-button-mac").attr('href', mac.browser_download_url).css('display','block');
         }
         if(linux){
-          $("#dl-button-linux").attr('href', mac.browser_download_url).css('display','block');
+          $("#dl-button-linux").attr('href', linux.browser_download_url).css('display','block');
         }
 
         //main dl button
