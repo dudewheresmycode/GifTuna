@@ -33,7 +33,7 @@ function GetLatestReleaseInfo() {
       //main dl button
       if(isMac){
         cl = 'fa-apple';
-        lbl='Mac OS';
+        lbl='Mac OS X';
         href=mac.browser_download_url;
         isValidOS=true;
         size = mac.size;
