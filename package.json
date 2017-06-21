@@ -1,6 +1,6 @@
 {
   "name": "gif-tuna",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "description": "A modern cross-platform video to gif converter",
   "scripts": {
     "postinstall":"npm --prefix ./app install ./app",
