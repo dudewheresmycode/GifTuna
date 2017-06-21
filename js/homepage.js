@@ -59,6 +59,7 @@ function GetLatestReleaseInfo() {
       }else{
         $("#dl-main").hide();
       }
+      $("#dynamic-dl").show();
 
     });
 }

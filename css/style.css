@@ -1,0 +1,131 @@
+
+
+
+@import url('https://fonts.googleapis.com/css?family=Montserrat:400,600,700,800');
+@import url('https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css');
+
+body {
+  font-family: "Montserrat", -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+  /*font-family: "Montserrat", sans-serif;*/
+  margin:0;
+  font-weight: 400;
+  background-color: #EDEDED;
+}
+.header {
+  text-align: center;
+  background-color: #202021;
+  box-shadow: inset 0px -5px 20px rgba(0,0,0,0.90);
+  /*position: relative;
+  z-index: 99;*/
+  color: #fff;
+  padding: 60px 0;
+}
+a {
+  color: #C35244;
+  font-weight: bold;
+  text-decoration: none;
+}
+.header img {
+  height: 128px;
+
+}
+.header h1 {
+  font-family: "Montserrat", sans-serif;
+  letter-spacing: 1px;
+  font-weight: 700;
+  color: #ee6352;
+  font-size: 4em;
+  text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+  margin: 0;
+  padding: 0;
+}
+hr {
+  border: none;
+  height: 1px;
+}
+.white {
+  background: #fff;
+  border-top: 1px solid #dadada;
+  border-bottom: 1px solid #dadada;
+}
+
+.container {
+  padding: 60px 0;
+  max-width: 1200px;
+  margin: auto;
+  display: flex;
+  flex-direction: row;
+}
+.container .flex-col {
+  flex: 0 1 33%;
+  padding: 50px;
+}
+.container .flex-col img {
+  display: block;
+  width: 100%;
+}
+.container .flex-col p {
+  line-height: 1.5;
+  color: #333;
+}
+@media screen and (max-width:640px){
+  .container {
+    flex-direction: column;
+  }
+}
+.container .screenshot {
+  flex: 0 1 auto;
+  padding: 0 30px;
+}
+.container .screenshot img {
+  width: 100%;
+  min-width: 320px;
+}
+.container .download {
+  padding: 30px;
+}
+.dl-button {
+  box-sizing: border-box;
+  /*display: block;*/
+  width: 100%;
+  margin: 0 0 15px 0;
+  text-align: left;
+  background-color: #B7B7B7;
+  padding: 10px 20px;
+  text-decoration: none;
+  color: #202021;
+  display: none;
+}
+.dl-button:hover,
+.dl-button.dl-main:hover {
+  background-color: #46CCF3;
+}
+.dl-button.dl-main {
+  background-color: #ee6352;
+  padding: 20px 20px;
+  font-size: 18px;
+  display: none;
+}
+.text-muted {
+  font-size: 0.8em;
+  color: #aaa !important;
+}
+
+#dynamic-dl {
+  display: none;
+}
+footer {
+  display: block;
+  padding: 50px 30px;
+  text-align: center;
+}
+
+.footer-links {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.footer-links li {
+  display: inline-block;
+  margin-right: 30px;
+}

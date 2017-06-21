@@ -4,116 +4,7 @@
 
   <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
   <title>GifTuna - A desktop video to gif converter for Mac, Windows and Linux.</title>
-  <style>
-  @import url('https://fonts.googleapis.com/css?family=Montserrat:400,600,700,800');
-  @import url('https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css');
-
-  body {
-    font-family: "Montserrat", -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
-    /*font-family: "Montserrat", sans-serif;*/
-    margin:0;
-    font-weight: 400;
-    background-color: #EDEDED;
-  }
-  .header {
-    text-align: center;
-    background-color: #202021;
-    box-shadow: inset 0px -5px 20px rgba(0,0,0,0.90);
-    /*position: relative;
-    z-index: 99;*/
-    color: #fff;
-    padding: 60px 0;
-  }
-  a {
-    color: #C35244;
-    font-weight: bold;
-    text-decoration: none;
-  }
-  .header img {
-    height: 128px;
-
-  }
-  .header h1 {
-    font-family: "Montserrat", sans-serif;
-    letter-spacing: 1px;
-    font-weight: 700;
-    color: #ee6352;
-    font-size: 4em;
-    text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
-    margin: 0;
-    padding: 0;
-  }
-  hr {
-    border: none;
-    height: 1px;
-  }
-  .white {
-    background: #fff;
-    border-top: 1px solid #dadada;
-    border-bottom: 1px solid #dadada;
-  }
-
-  .container {
-    padding: 60px 0;
-    max-width: 1200px;
-    margin: auto;
-    display: flex;
-    flex-direction: row;
-  }
-  .container .flex-col {
-    flex: 0 1 33%;
-    padding: 50px;
-  }
-  .container .flex-col img {
-    display: block;
-    width: 100%;
-  }
-  .container .flex-col p {
-    line-height: 1.5;
-    color: #333;
-  }
-  @media screen and (max-width:640px){
-    .container {
-      flex-direction: column;
-    }
-  }
-  .container .screenshot {
-    flex: 0 1 auto;
-    padding: 0 30px;
-  }
-  .container .screenshot img {
-    width: 100%;
-    min-width: 320px;
-  }
-  .container .download {
-    padding: 30px;
-  }
-  .dl-button {
-    box-sizing: border-box;
-    /*display: block;*/
-    width: 100%;
-    margin: 0 0 15px 0;
-    text-align: left;
-    background-color: #939394;
-    padding: 10px 20px;
-    text-decoration: none;
-    color: #202021;
-    display: none;
-  }
-  .dl-button:hover {
-    background-color: #B7B7B7;
-  }
-  .dl-button.dl-main {
-    background-color: #ee6352;
-    padding: 20px 20px;
-    font-size: 18px;
-    display: none;
-  }
-  .text-muted {
-    font-size: 0.8em;
-    color: #aaa !important;
-  }
-  </style>
+  <link rel="stylesheet" type="text/css" href="css/style.css" />
 </head>
 <body>
   <div class="header">
@@ -125,20 +16,21 @@
   </div>
   <div class="container">
     <div class="screenshot flex-col">
-      <a href="images/gt-demo.gif" target="_blank"><img src="images/gt-demo.gif" /></a>
+      <a href="http://i.imgur.com/EdQgLV8.gif" target="_blank"><img src="http://i.imgur.com/EdQgLV8.gif" /></a>
     </div>
     <div class="download flex-col">
-      <a id="dl-main" class="dl-main dl-button">Download for XXX</a>
-      <p class="text-muted" id="version">
-        <span class="pull-right"><i class="fa fa-file-archive-o"></i> <span class="size"></span></span>
-        Version <span class="version"></span>
-      </p>
-      <hr />
-      <h4>All Platforms</h4>
-      <a href="#" id="dl-button-mac" class="dl-button"><i class="fa fa-apple fa-fw"></i> Mac OS X</a>
-      <a href="#" id="dl-button-win" class="dl-button"><i class="fa fa-windows fa-fw"></i> Windows</a>
-      <a href="#" id="dl-button-linux" class="dl-button"><i class="fa fa-linux fa-fw"></i> Linux 64-bit</a>
-
+      <div id="dynamic-dl">
+        <a id="dl-main" class="dl-main dl-button">Download for XXX</a>
+        <p class="text-muted" id="version">
+          <span class="pull-right"><i class="fa fa-file-archive-o"></i> zip &bull; <span class="size"></span></span>
+          Version <span class="version"></span>
+        </p>
+        <hr />
+        <h4>All Platforms</h4>
+        <a href="#" id="dl-button-mac" class="dl-button"><i class="fa fa-apple fa-fw"></i> Mac OS X</a>
+        <a href="#" id="dl-button-win" class="dl-button"><i class="fa fa-windows fa-fw"></i> Windows</a>
+        <a href="#" id="dl-button-linux" class="dl-button"><i class="fa fa-linux fa-fw"></i> Linux 64-bit</a>
+      </div>
     </div>
   </div>
   <hr />
@@ -146,11 +38,11 @@
     <div class="container">
       <div class="flex-col">
         <i class="fa fa-eyedropper fa-4x"></i>
-        <h3>Customize your color palettes</h3>
+        <h3>High Quality Gifs</h3>
         <!-- <div class="thumbnail-wrap">
           <img src="images/palette.jpg" />
         </div> -->
-        <p>GifTuna lets you tweak individual colors in your palette before exporting to optimize any overly diffused areas.</p>
+        <p>Dither and palette settings let's you create higher quality gifs, even with longer sources.</p>
       </div>
       <div class="flex-col">
         <i class="fa fa-wrench fa-4x"></i>
@@ -164,9 +56,29 @@
         <i class="fa fa-github fa-4x"></i>
         <h3>Open Source</h3>
         <p>GifTuna is free (as in beer), and open source project. You're welcome to report bugs or contribute code to the <a href="https://github.com/dudewheresmycode/giftuna">GifTuna repository on Github</a>.</p>
+        <form action="https://www.paypal.com/cgi-bin/webscr" method="post" target="_top">
+        <input type="hidden" name="cmd" value="_s-xclick">
+        <input type="hidden" name="encrypted" value="-----BEGIN PKCS7-----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-----END PKCS7-----
+        ">
+        <input type="image" src="https://www.paypalobjects.com/en_US/i/btn/btn_donate_LG.gif" border="0" name="submit" alt="PayPal - The safer, easier way to pay online!">
+        <img alt="" border="0" src="https://www.paypalobjects.com/en_US/i/scr/pixel.gif" width="1" height="1">
+        </form>
       </div>
     </div>
   </div>
+  <footer>
+
+    <ul class="footer-links">
+      <li class="footer-text">
+        &copy; 2017 GifTuna.io
+      </li>
+      <li><a target="_blank" href="http://github.com/dudewheresmycode/GifTuna">Contribute</a></li>
+      <li><a target="_blank" href="http://github.com/dudewheresmycode/GifTuna/releases/latest">Download</a></li>
+      <li><a target="_blank" href="http://reddit.com/r/HighQualityGifs">Watch</a></li>
+    </ul>
+
+
+  </footer>
   <script src="js/homepage.js"></script>
 </body>
 </html>
