@@ -57,7 +57,7 @@ function GetLatestReleaseInfo() {
         $("#version .version").text(release.tag_name);
         $("#version .size").text(humanFileSize(size));
       }else{
-        $("#dl-main").hide();
+        $("#dl-main", "#version").hide();
       }
       $("#dynamic-dl").show();
 
