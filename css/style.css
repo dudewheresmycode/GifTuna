@@ -111,7 +111,8 @@ hr {
   font-size: 18px;
   display: none;
 }
-.text-muted {
+.text-muted,
+.text-muted a {
   font-size: 0.8em;
   color: #aaa !important;
 }
