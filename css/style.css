@@ -113,7 +113,7 @@ hr {
 }
 .text-muted,
 .text-muted a {
-  font-size: 0.8em;
+  font-size: 12px !important;
   color: #aaa !important;
 }
 
