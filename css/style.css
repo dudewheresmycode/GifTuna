@@ -105,6 +105,10 @@ hr {
 .dl-button.dl-main:hover {
   background-color: #46CCF3;
 }
+.dl-button:active,
+.dl-button.dl-main:active {
+  background-color: #3AA7C7;
+}
 .dl-button.dl-main {
   background-color: #ee6352;
   padding: 20px 20px;
