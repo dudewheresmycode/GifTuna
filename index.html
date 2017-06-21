@@ -90,7 +90,7 @@
   }
   .dl-button {
     box-sizing: border-box;
-    display: block;
+    /*display: block;*/
     width: 100%;
     margin: 0 0 15px 0;
     text-align: left;
@@ -109,6 +109,10 @@
     font-size: 18px;
     display: none;
   }
+  .text-muted {
+    font-size: 0.8em;
+    color: #aaa !important;
+  }
   </style>
 </head>
 <body>
@@ -124,7 +128,12 @@
       <a href="images/gt-demo.gif" target="_blank"><img src="images/gt-demo.gif" /></a>
     </div>
     <div class="download flex-col">
-      <a href="#" id="dl-main" class="dl-main dl-button">Download for XXX</a>
+      <a id="dl-main" class="dl-main dl-button">Download for XXX</a>
+      <p class="text-muted" id="version">
+        <span class="pull-right"><i class="fa fa-file-archive-o"></i> <span class="size"></span></span>
+        Version <span class="version"></span>
+      </p>
+      <hr />
       <h4>All Platforms</h4>
       <a href="#" id="dl-button-mac" class="dl-button"><i class="fa fa-apple fa-fw"></i> Mac OS X</a>
       <a href="#" id="dl-button-win" class="dl-button"><i class="fa fa-windows fa-fw"></i> Windows</a>
@@ -158,66 +167,6 @@
       </div>
     </div>
   </div>
-  <script>
-  $(document).ready(function () {
-      GetLatestReleaseInfo();
-  });
-
-  function GetLatestReleaseInfo() {
-
-      var user_os = navigator.platform || navigator.oscpu;
-      var isMac = /mac/gi.test(user_os);
-      var isWindows = /win/gi.test(user_os);
-      var isLinux = /linux/gi.test(user_os);
-      var cl = false;
-      var lbl = false;
-      // if(isMac){ cl = 'fa-apple'; lbl='Mac OS'; }
-      // if(isWindows){ cl = 'fa-windows'; lbl='Windows'; }
-      // if(isLinux){ cl = 'fa-linux'; lbl='Linux'; }
-
-      var isValidOS=false;
-      $.getJSON("https://api.github.com/repos/dudewheresmycode/GifTuna/releases/latest").done(function (release) {
-        var win = release.assets.find(function(it){ return /win32/gi.test(it.name); });
-        var mac = release.assets.find(function(it){ return /mac/gi.test(it.name); });
-        var linux = release.assets.find(function(it){ return /linux/gi.test(it.name); });
-
-        if(win){
-          $("#dl-button-win").attr('href', win.browser_download_url).css('display','block');
-        }
-        if(mac){
-          $("#dl-button-mac").attr('href', mac.browser_download_url).css('display','block');
-        }
-        if(linux){
-          $("#dl-button-linux").attr('href', linux.browser_download_url).css('display','block');
-        }
-
-        //main dl button
-        if(isMac){
-          cl = 'fa-apple';
-          lbl='Mac OS';
-          href=mac.browser_download_url;
-          isValidOS=true;
-        }else if(isWindows){
-          cl = 'fa-windows';
-          lbl='Windows';
-          href=win.browser_download_url;
-          isValidOS=true;
-        }else if(isLinux){
-          cl = 'fa-linux';
-          lbl='Linux';
-          href=linux.browser_download_url;
-          isValidOS=true;
-        }
-
-        if(isValidOS){
-          $("#dl-main").html('<i class="fa fa-fw '+cl+'"></i> Download for '+lbl).attr('href', href).css('display','block');
-        }else{
-          $("#dl-main").hide();
-        }
-
-      });
-  }
-
-  </script>
+  <script src="js/homepage.js"></script>
 </body>
 </html>
