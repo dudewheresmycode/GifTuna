@@ -108,20 +108,24 @@
         <!-- <h3 class="section-title">Preview</h3> -->
         <div class="progress-canvas" ng-if="status.state==4">
           <div class="progress">
-            <div class="progress-fill" ng-class="{finished:status.export.progress==100}" ng-style="{width:status.export.progress+'%'}"></div>
+            <div class="progress-fill" ng-class="{finished:status.export.progress==100, spin:status.export.canceling}" ng-style="{width:status.export.progress+'%'}"></div>
           </div>
 
           <div class="progress-info">
             <div class="progress-text" ng-class="{finished:status.export.progress==100}">
-              <span class="progress-text-percent" ng-show="status.export.progress<100">{{status.export.progress|number:1}}%</span>
+              <span class="progress-text-percent" ng-show="status.export.progress<100&&!status.export.canceling">{{status.export.progress|number:1}}%</span>
               <span ng-if="status.export.progress==100">Complete</span>
+              <span ng-if="status.export.canceling">Canceling</span>
               <span class="progress-text-size">{{status.export.size|filesize}} <span ng-show="status.export.progress<100">written</span></span>
             </div>
             <div class="progress-action">
+              <div ng-show="status.export.progress<100">
+                <a class="btn" href ng-click="cancelExport()">Cancel</a>
+              </div>
               <div ng-show="status.export.progress==100">
                 <a href ng-click="reveal()">Show in Finder</a>
                 <a href ng-click="preview()">Preview</a>
-                <a class="btn" href ng-click="exportDone()">Done</a>
+                <a class="btn-primary" href ng-click="exportDone()">Done</a>
               </div>
             </div>
           </div>

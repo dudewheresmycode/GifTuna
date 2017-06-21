@@ -1,4 +1,4 @@
 node_modules/
-resources/
+app/node_modules
 .DS_Store
 build/

@@ -110,6 +110,11 @@ app.controller('gifSettings',function($scope,$filter,$timeout){
       // ipcRenderer.send('exportGif', $rootScope.currentSource.source.file.path, file, $rootScope.colorPalette, $rootScope.prefs);
     });
   }
+  $scope.cancelExport = function(){
+    $scope.status.export.canceling=true;
+    ipcRenderer.send('cancel_export', {remove:$scope.status.export.path});
+
+  }
   $scope.widthChange = function(){
     if($scope.settings.dimensions.width > 0 && $scope.settings.dimensions.lock){
       var ratio = $scope.settings.dimensions.original_height/$scope.settings.dimensions.original_width;
@@ -159,7 +164,6 @@ app.controller('gifSettings',function($scope,$filter,$timeout){
     $scope.status.export = {progress:0, size:0, path:null};
   }
   $scope.refreshPalette = function(){
-    console.log('refresh');
     $scope.thumbnail = null;
     $scope.palette = null;
     $scope.cancel();
@@ -173,6 +177,12 @@ app.controller('gifSettings',function($scope,$filter,$timeout){
     var time = $scope.frames.current;
     ipcRenderer.send('getThumbnail', $scope.settings.file.input.path, $scope.palette, time, $scope.settings)
   }
+  ipcRenderer.on('export_canceled',function(ev,progress){
+    console.log("CANCELED");
+    $scope.status.export.canceling=false;
+    $scope.exportDone();
+    $scope.$apply();
+  });
   ipcRenderer.on('export_progress',function(ev,progress){
     console.log("Progress", progress);
     var p = (progress.sec/$scope.settings.probe.duration)*100;

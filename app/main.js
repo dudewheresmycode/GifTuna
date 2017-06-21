@@ -101,9 +101,9 @@ app.on('ready', function(){
 app.on('window-all-closed', function () {
   // On OS X it is common for applications and their menu bar
   // to stay active until the user quits explicitly with Cmd + Q
-  if (process.platform !== 'darwin') {
+  // if (process.platform !== 'darwin') {
     app.quit()
-  }
+  // }
 })
 
 app.on('activate', function () {
@@ -179,9 +179,18 @@ ipcMain.on('getPalette', (event, input, prefs) => {
     event.sender.send('paletteResult', Buffer.concat(data).toString('base64'));
   });
 })
-ipcMain.on('cancelProcess', (event) => {
-  if(ffmpeg_ps){
-    ffmpeg_ps.kill();
+ipcMain.on('cancelProcess', (event,opts) => {
+  if(ffmpeg_ps){ ffmpeg_ps.kill(); }
+});
+
+var canceled = false;
+ipcMain.on('cancel_export', (event, opts) => {
+  canceled=true;
+  if(ffmpeg_ps){ ffmpeg_ps.kill(); }
+  if(opts.remove){
+    //remove the partially exported file
+    console.log("REMOVE", opts.remove);
+    fs.unlinkSync(opts.remove);
   }
 });
 ipcMain.on('getThumbnail', (event, input, palette, time, settings) => {
@@ -274,8 +283,13 @@ ipcMain.on('exportGif', (event, input, output, palette, settings) => {
   });
   ffmpeg_ps.on('close',function(){
     // event.sender.send('thumbnailResult', Buffer.concat(data).toString('base64'));
-    event.sender.send('export_finished', getFilesizeInBytes(output));
     console.log('done');
+    if(canceled){
+      canceled=false;
+      event.sender.send('export_canceled', {});
+    }else{
+      event.sender.send('export_finished', getFilesizeInBytes(output));
+    }
   });
 
   ffmpeg_ps.stdin.write(Buffer.from(palette, 'base64'));
