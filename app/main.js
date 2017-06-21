@@ -144,8 +144,10 @@ ipcMain.on('install_ffmpeg',function(event,input){
 // In this file you can include the rest of your app's specific main process
 // code. You can also put them in separate files and require them here.
 ipcMain.on('probeInput', (event, input) => {
-  console.log("PROBE", input);
-  exec("'"+ffprobe_path+"' -v quiet -print_format json -show_format -show_streams \""+input+"\"", function(so,se,e) {
+  console.log("PROBE", ffprobe_path);
+  var cmd = "\""+ffprobe_path+"\" -v quiet -print_format json -show_format -show_streams \""+input+"\"";
+  
+  exec(cmd, function(so,se,e) {
     // console.log(so,se,e);
     var metadata = JSON.parse(se);
     event.sender.send('probeResult', metadata);
