@@ -13,7 +13,7 @@ function GetLatestReleaseInfo() {
     // if(isMac){ cl = 'fa-apple'; lbl='Mac OS'; }
     // if(isWindows){ cl = 'fa-windows'; lbl='Windows'; }
     // if(isLinux){ cl = 'fa-linux'; lbl='Linux'; }
-
+    $("#dynamic-dl").hide();
     var isValidOS=false;
     $.getJSON("https://api.github.com/repos/dudewheresmycode/GifTuna/releases/latest").done(function (release) {
       var win = release.assets.find(function(it){ return /win32/gi.test(it.name); });

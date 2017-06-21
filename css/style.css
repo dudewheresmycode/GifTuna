@@ -112,7 +112,7 @@ hr {
 }
 
 #dynamic-dl {
-  display: none;
+  /*display: none;*/
 }
 footer {
   display: block;
