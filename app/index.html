@@ -5,6 +5,7 @@
     <title>GifTuna</title>
     <link rel="stylesheet" href="css/style.css" />
     <link rel="stylesheet" href="css/slider.css" />
+    <link rel="stylesheet" href="lib/minicolors/jquery.minicolors.css" />
   </head>
   <body ng-controller="gifSettings" ng-cloak>
     <div class="app">
@@ -44,7 +45,7 @@
         </div>
 
         <!-- <h6>Color Options</h6> -->
-        <h3 class="section-title">Color Options</h3>
+        <h3 class="section-title">Dither Options</h3>
         <div class="form-group form-group-inline">
           <h5>Dither</h5>
           <div class="form-control">
@@ -69,8 +70,8 @@
 
           <div class="custom-select" ng-class="{disabled:status.state<5}">
             <select ng-change="refreshPalette()" ng-disabled="status.state<5" ng-model="settings.color.stats_mode">
-              <option value="full">full</option>
-              <option value="diff">diff</option>
+              <option value="full">Full</option>
+              <option value="diff">Frame Difference</option>
             </select>
           </div>
 
@@ -83,13 +84,36 @@
             </label>
           </div> -->
         </div>
-        <p>
-          &nbsp;
-        </p>
+        <div class="form-group form-group-inline">
+          <h5>Stats Mode</h5>
+
+          <div class="custom-select" ng-class="{disabled:status.state<5}">
+            <select ng-change="refreshPalette()" ng-disabled="status.state<5" ng-model="settings.color.diff_mode">
+              <option value="rectangle">Rectangle</option>
+              <option value="none">None</option>
+            </select>
+          </div>
+
+        </div>
+
+
+
+        <h3 class="section-title">Color Palette</h3>
         <div class="form-group">
-          <h5>Color Palette</h5>
+          <h5>Colors</h5>
+          <div class="form-control">
+            <div class="custom-range">
+              <div class="custom-range-value"><input type="number" ng-disabled="status.state<5" min="16" max="256" ng-blur="refreshPalette()" ng-model="color_value" /></div>
+              <div class="custom-range-input">
+                <input type="range" min="16" step="2" max="256" ng-disabled="status.state<5" ng-mouseup="refreshPalette()" ng-model="settings.color.count" />
+              </div>
+            </div>
+          </div>
+        <!-- </div> -->
+        <!-- <div class="form-group"> -->
+          <!-- <h5>Color Palette</h5> -->
           <div class="form-control palette-control">
-            <img class="palette" ng-if="palette!=null" ng-src="data:image/png;base64,{{palette}}" />
+            <div pixel-palette ng-model="palette" data-max-colors="settings.color.count"></div>
           </div>
         </div>
 
@@ -123,9 +147,9 @@
                 <a class="btn" href ng-click="cancelExport()">Cancel</a>
               </div>
               <div ng-show="status.export.progress==100">
-                <a href ng-click="reveal()">Show in folder</a>
-                <a href ng-click="preview()">Preview</a>
-                <a class="btn-primary" href ng-click="exportDone()">Done</a>
+                <a class="btn" href ng-click="reveal()">Show in folder</a>
+                <a class="btn" href ng-click="preview()">Preview</a>
+                <a class="btn btn-primary" href ng-click="exportDone()">Done</a>
               </div>
             </div>
           </div>

@@ -10,6 +10,8 @@ const {shell} = require('electron')
 const url = require('url')
 const path = require('path')
 
+require("./lib/minicolors/jquery.minicolors.js");
+
 global.jQuery = global.$ = require('jquery');
 global.angular = require('angular');
 
@@ -41,7 +43,7 @@ app.controller('installFfmpeg',function($scope){
   // });
 
 });
-app.controller('gifSettings',function($scope,$filter,$timeout){
+app.controller('gifSettings',function($scope,$filter,$timeout,$rootScope){
   $scope.status = {
     state:0,
     export:{progress:0,size:0,path:null}
@@ -51,7 +53,7 @@ app.controller('gifSettings',function($scope,$filter,$timeout){
     min:0,
     max:100
   }
-  $scope.settings = {
+  $scope.defaults = {
     file: {
       input:null
     },
@@ -65,12 +67,26 @@ app.controller('gifSettings',function($scope,$filter,$timeout){
     fps:24,
     color: {
       stats_mode:"diff",
+      diff_mode: "rectangle",
       dither:true,
-      dither_scale:2,
-      colors: 256,
+      count: 256,
+      dither_scale:3,
       alpha:false
     }
   };
+  $scope.settings = angular.copy($scope.defaults);
+  $scope.color_value = 256;
+
+  $scope.$watch('color_value',function(nv){
+    if(nv){
+      $scope.settings.color.count = Number(nv);
+    }
+  });
+  $scope.$watch('settings.color.count',function(nv){
+    if(nv){
+      $scope.color_value = Number(nv);
+    }
+  })
 
   $scope.settings.dimensions.ratio = $scope.settings.dimensions.original_height/$scope.settings.dimensions.original_width;
   var prom;
@@ -78,6 +94,9 @@ app.controller('gifSettings',function($scope,$filter,$timeout){
     if(nv!=ov && $scope.status.state==5){
       $scope.refreshThumbnail();
     }
+  });
+  $rootScope.$on('colorPaletteChange',function(){
+    $scope.refreshThumbnail();
   });
 
   $scope.reveal = function(){
@@ -138,6 +157,8 @@ app.controller('gifSettings',function($scope,$filter,$timeout){
     if(reset){
       $scope.status.state=0;
       $scope.settings.file = {input:null};
+      $scope.palette = null;
+      $scope.thumbnail = null;
     }
   }
   $scope.refreshFps = function(){
@@ -248,6 +269,7 @@ app.controller('gifSettings',function($scope,$filter,$timeout){
       $scope.status.state=1;
       $scope.palette = null;
       $scope.thumbnail = null;
+      $scope.settings.color = angular.copy($scope.defaults.color);
       ipcRenderer.send('probeInput', nv.path)
     }
   });
@@ -313,9 +335,102 @@ app.directive('inputSelect',function(){
     }
   }
 })
-app.directive('pixelPalette', function(){
+app.directive('pixelPalette', function($timeout,$rootScope){
 return {
-  link: function(scope,ele,attr){
+  // template:'<img class="palette" ng-if="palette_data!=null" ng-src="data:image/png;base64,{{palette_data}}" />',
+  templateUrl: 'tpl/palette.html',
+  require: 'ngModel',
+  scope: {
+    ngModel:'=',
+    maxColors:'='
+  },
+  link: function(scope,ele,attr,ngModelCtl){
+
+      scope.pixels = scope.ngModel ? read_palette(scope.ngModel) : [];
+      scope.rgb = {};
+
+      scope.$watch('ngModel',function(nv,ov){
+        if(nv && nv!=ov){
+          scope.pixels = read_palette(nv);
+        }
+        if(nv==null){
+          scope.pixels = [];
+        }
+      })
+
+      // scope.hexPattern = new RegExp(/^0x[0-9A-F]{1,4}$/i);
+      ele.find('.hex-input').on('keyup',function(e){
+        var regExp = new RegExp(/[0-9A-F]/i);
+        var last = $(this).val().substr(-1)
+        console.log(last);
+        if(!regExp.test(last)){
+          console.log("NOPE");
+          $(this).val($(this).val().slice(0,-1));
+        }
+      });
+
+      $picker = ele.find('.pixel-picker');
+      $mini  = ele.find('input.pixel-mini-colors');
+
+      $mini.minicolors({
+        inline:true,
+        format:'rgb',
+        change: function(value, opacity) {
+          var rgb = $(this).minicolors('rgbObject');
+          $timeout(function() {
+            // scope.pixels[scope.pixelIndex] = [rgb.r,rgb.g,rgb.b];
+            scope.rgb = rgb;
+            scope.hexValue = rgb_to_hex(scope.rgb.r,scope.rgb.g,scope.rgb.b);
+          });
+        }
+      });
+
+      $picker.appendTo(document.body);
+      $picker.on('click',function(e){
+        // e.preventDefault();
+        e.stopPropagation();
+      }).on('mousedown',function(){
+        scope.startedIn=true;
+      });
+      scope.$close = function(){
+        $picker.removeClass('open');
+        scope.pixelIndex = null;
+        scope.rgb = {};
+      }
+      scope.$set = function(){
+        $picker.removeClass('open');
+        scope.pixels[scope.pixelIndex] = [scope.rgb.r,scope.rgb.g,scope.rgb.b];
+        scope.pixelIndex = null;
+        put_palette();
+        scope.rgb = {};
+
+      }
+      scope.pickMe = function(i,e){
+        e.preventDefault();
+        e.stopPropagation();
+
+        var p = $(e.target).offset();
+        var color = scope.pixels[i];
+        $mini.minicolors('value', "rgb("+color.join(',')+")");
+        scope.stored = color;
+        scope.pixelIndex = i;
+        scope.hexValue = rgb_to_hex(color[0],color[1],color[2]);
+
+
+        $picker.css('top',p.top+'px').css('left',p.left+'px').addClass('open');
+      }
+      $(document).on('mouseup',function(e){
+        if(!scope.startedIn){
+          $picker.removeClass('open');
+          scope.pixelIndex = null;
+        }
+        scope.startedIn=false;
+      });
+      scope.$color = function(c){
+        return {
+          'background-color': "rgb("+c[0]+","+c[1]+","+c[2]+")"
+        }
+      }
 
       function put_palette(){
         if(scope.pixels.length>0){
@@ -339,19 +454,30 @@ return {
           // console.log(data);
           ctx.putImageData(idata,0,0);
           var uri = canvas.toDataURL("image/png").split('base64,')[1];
-          $rootScope.colorPalette = uri;
-          // ngModelCtl.$setViewValue(uri);
-          // ngModelCtl.$render();
+          // $scope.palette = uri;
+          ngModelCtl.$setViewValue(uri);
+          ngModelCtl.$render();
           $rootScope.$emit('colorPaletteChange');
         }
       }
+      function rgb_to_hex(r,g,b){
+          var bin = r << 16 | g << 8 | b;
+          return (function(h){
+              return new Array(7-h.length).join("0")+h
+          })(bin.toString(16).toUpperCase())
+      }
+      var canvas = document.createElement('canvas');
+      var ctx = canvas.getContext('2d');
 
       function read_palette(img_src){
         var img = new Image();
         img.src = 'data:image/png;base64,'+img_src;
+        canvas.width = 16;
+        canvas.height = 16;
         ctx.clearRect(0,0,16,16);
         ctx.drawImage(img,0,0);
-        scope.pixels = [];
+        // scope.pixels = [];
+        var pixel_array = [];
         var pixel_data = ctx.getImageData(0,0,16,16);
         for(var i=0;i<pixel_data.data.length;i+=4){
           var p = [];
@@ -359,8 +485,10 @@ return {
           p[1] = pixel_data.data[i+1];
           p[2] = pixel_data.data[i+2];
           p[3] = 255;
-          if(scope.pixels.length < scope.colors) scope.pixels.push(p);
+          if(pixel_array.length < scope.maxColors)
+            pixel_array.push(p);
         }
+        return pixel_array;
         // scope.pixels.push([0,0,0,0]);
         // ngModelCtl.$setViewValue(canvas.toDataURL("image/png").split('base64,')[1]);
         // ngModelCtl.$render();

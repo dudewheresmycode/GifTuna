@@ -146,7 +146,7 @@ ipcMain.on('install_ffmpeg',function(event,input){
 ipcMain.on('probeInput', (event, input) => {
   console.log("PROBE", ffprobe_path);
   var cmd = "\""+ffprobe_path+"\" -v quiet -print_format json -show_format -show_streams \""+input+"\"";
-  
+
   exec(cmd, function(so,se,e) {
     // console.log(so,se,e);
     var metadata = JSON.parse(se);
@@ -160,8 +160,9 @@ ipcMain.on('getPalette', (event, input, prefs) => {
   var h = prefs.dimensions.height || 240;
   var fps = prefs.fps || 24;
   var stats = prefs.color.stats_mode || 'full';
-  var colors = prefs.color.colors || 256;
+  // var colors = prefs.color.colors || 256;
   var transparency = (prefs.color.alpha?1:0) || 0;
+  var colors = prefs.color.count || 256;
 
   var scaleCmd = "scale="+w+":"+h;
 
@@ -205,9 +206,14 @@ ipcMain.on('getThumbnail', (event, input, palette, time, settings) => {
   // var gif = "fps="+settings.fps+",flags=lanczos[x];[x][1:v]paletteuse=dither="+settings.dither;
   var w = settings.dimensions.width || 320;
   var h = settings.dimensions.height || 240;
+  var fps = settings.fps || 24;
   var scaleCmd = "scale="+w+":"+h;
   var dither = settings.color.dither ? ('bayer:bayer_scale='+settings.color.dither_scale) : 'none';
-  var vf = util.format("fps=24,%s:flags=lanczos [x];[x][1:v]paletteuse=dither=%s", scaleCmd, dither);
+  var diff_mode = settings.color.diff_mode ? settings.color.diff_mode : "rectangle";
+  var diff_mode = settings.loop ? settings.loop : 0;
+
+  var vf = util.format("fps=%s,%s:flags=lanczos [x];[x][1:v]paletteuse=dither=%s:diff_mode=%s", fps, scaleCmd, dither, diff_mode, loop);
+  console.log(vf);
   if(ffmpeg_ps) ffmpeg_ps.kill();
   ffmpeg_ps = spawn(ffmpeg_path, [
     "-ss", time,

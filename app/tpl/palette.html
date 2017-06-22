@@ -1,0 +1,22 @@
+<div class="pixel-palette">
+  <div class="pixel-pixels">
+    <a ng-click="pickMe($index,$event)" ng-repeat="p in pixels track by $index" class="pixel" ng-style="$color(p)" ng-class={"on":pixelIndex==$index}></a>
+  </div>
+  <div class="pixel-picker">
+    <div class="picker-actions">
+      <a class="btn btn-small" ng-click="$close()">Cancel</a>
+      <a class="btn btn-small btn-primary"  ng-click="$set()">Ok</a>
+    </div>
+
+    <div class="hex-control">
+      <div class="color-preview" ng-style="{'background-color':'#'+hexValue}"></div>
+      <div class="hex-input-wrapper">
+        <input type="text" class="hex-input" ng-model="hexValue" maxlength="6" />
+      </div>
+    </div>
+    <div class="picker-control">
+      <input type="text" class="pixel-mini-colors" />
+    </div>
+  </div>
+
+</div>
