@@ -15,9 +15,13 @@ input[type=range]::-webkit-slider-runnable-track {
   background: #222;
 }
 input[type=range]::-webkit-slider-thumb {
-  height: 16px;
-  width: 16px;
-  background: #fff;
+  width: 18px;
+  height: 18px;
+
+  background-color: #EE6352;
+  /*background-image:url('../svg/slider.svg');*/
+  background-repeat: no-repeat;
+  background-size: contain;
   border-radius: 20px;
   /*border-top: 10px solid red;*/
   /*border-right: 10px solid transparent;
@@ -27,7 +31,7 @@ input[type=range]::-webkit-slider-thumb {
   /*background: #ffffff;*/
   cursor: pointer;
   -webkit-appearance: none;
-  margin-top: -3px;
+  margin-top: -4px;
 }
 input[type=range]:focus::-webkit-slider-runnable-track {
   background: #333;
