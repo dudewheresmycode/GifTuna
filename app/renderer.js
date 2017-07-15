@@ -65,6 +65,7 @@ app.controller('gifSettings',function($scope,$filter,$timeout,$rootScope){
       lock:true
     },
     fps:24,
+    loop:0,
     color: {
       stats_mode:"diff",
       diff_mode: "rectangle",
@@ -74,6 +75,13 @@ app.controller('gifSettings',function($scope,$filter,$timeout,$rootScope){
       alpha:false
     }
   };
+  $scope.loopOpts = [
+    {value:0, label:"Forever"},
+    {value:1, label:"Once"}
+  ];
+  // for(var i=2;i<120;i++){
+  //   $scope.loopOpts.push({value:i, label:i+"x"});
+  // }
   $scope.settings = angular.copy($scope.defaults);
   $scope.color_value = 256;
 

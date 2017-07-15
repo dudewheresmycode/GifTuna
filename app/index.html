@@ -37,12 +37,18 @@
             <label><input type="checkbox" ng-disabled="status.state<5" ng-model="settings.dimensions.lock" /> {{settings.dimensions.ratio|ratio}}</label>
           </div>
         </div>
-        <div class="form-group">
+        <div class="form-group form-group-inline">
           <h5>FPS</h5>
           <div class="form-control">
             <input type="number" ng-disabled="status.state<5" ng-blur="refreshFps()" ng-model="settings.fps" />
           </div>
         </div>
+        <!-- <div class="form-group form-group-inline">
+          <h5>Loop</h5>
+          <div class="custom-select" ng-class="{disabled:status.state<5}">
+            <select ng-model="settings.loop" ng-disabled="status.state<5" ng-options="loop.value as loop.label for loop in loopOpts"></select>
+          </div>
+        </div> -->
 
         <!-- <h6>Color Options</h6> -->
         <h3 class="section-title">Dither Options</h3>
@@ -85,12 +91,12 @@
           </div> -->
         </div>
         <div class="form-group form-group-inline">
-          <h5>Stats Mode</h5>
+          <h5>Changing Rectangle</h5>
 
           <div class="custom-select" ng-class="{disabled:status.state<5}">
-            <select ng-change="refreshPalette()" ng-disabled="status.state<5" ng-model="settings.color.diff_mode">
-              <option value="rectangle">Rectangle</option>
-              <option value="none">None</option>
+            <select ng-change="refreshThumbnail()" ng-disabled="status.state<5" ng-model="settings.color.diff_mode">
+              <option value="rectangle">On</option>
+              <option value="none">Off</option>
             </select>
           </div>
 

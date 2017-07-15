@@ -210,9 +210,9 @@ ipcMain.on('getThumbnail', (event, input, palette, time, settings) => {
   var scaleCmd = "scale="+w+":"+h;
   var dither = settings.color.dither ? ('bayer:bayer_scale='+settings.color.dither_scale) : 'none';
   var diff_mode = settings.color.diff_mode ? settings.color.diff_mode : "rectangle";
-  var diff_mode = settings.loop ? settings.loop : 0;
+  // var loop = settings.loop ? settings.loop : 0;
 
-  var vf = util.format("fps=%s,%s:flags=lanczos [x];[x][1:v]paletteuse=dither=%s:diff_mode=%s", fps, scaleCmd, dither, diff_mode, loop);
+  var vf = util.format("fps=%s,%s:flags=lanczos [x];[x][1:v]paletteuse=dither=%s:diff_mode=%s", fps, scaleCmd, dither, diff_mode);
   console.log(vf);
   if(ffmpeg_ps) ffmpeg_ps.kill();
   ffmpeg_ps = spawn(ffmpeg_path, [
@@ -254,14 +254,20 @@ ipcMain.on('exportGif', (event, input, output, palette, settings) => {
   var fps = settings.fps || 10;
   var w = settings.dimensions.width || 320;
   var h = settings.dimensions.height || 240;
+  var diff_mode = settings.color.diff_mode ? settings.color.diff_mode : "rectangle";
+  var loop = settings.loop ? settings.loop : 0;
+  console.log("loop");
+
   var scaleCmd = "scale="+w+":"+h;
-  var vf = util.format("fps=%s,%s:flags=lanczos [x];[x][1:v]paletteuse=dither=%s", fps, scaleCmd, dither);
+  var vf = util.format("fps=%s,%s:flags=lanczos [x];[x][1:v]paletteuse=dither=%s:diff_mode=%s", fps, scaleCmd, dither, diff_mode);
 
   // var filters = util.format("fps=%s,%s:flags=lanczos[x];[x][1:v]paletteuse=dither=%s", fps, scaleCmd, dither);
   if(ffmpeg_ps) ffmpeg_ps.kill();
   ffmpeg_ps = spawn(ffmpeg_path, [
     "-i", input,
     "-i", "pipe:0",
+    // "-loop", loop,
+    // "-vf", "loop=1",
     "-lavfi", vf,
     "-an",
     "-f", "gif",
@@ -274,6 +280,7 @@ ipcMain.on('exportGif', (event, input, output, palette, settings) => {
   });
   ffmpeg_ps.stderr.on('data',function(d){
     // var time = /time=(\d+)\:(\d+)\:(\d+)\.(\d+)\s+/.exec(d.toString());
+    console.log("stdout",d.toString());
     var progress = parseProgressLine(d.toString());
     console.log(progress);
     // if(time && time.length >= 5){
