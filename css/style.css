@@ -72,22 +72,13 @@ hr {
   flex: 0 1 auto;
   padding: 0 30px;
 }
-
-@media screen and (max-width:640px){
-  .container {
-    flex-direction: column;
-    padding: 0;
-  }
-  .container .screenshot {
-    padding: 0 0 30px 0;
-  }
-}
 .container .screenshot img {
   width: 100%;
   min-width: 320px;
 }
 .container .download {
   padding: 30px;
+  min-width: 290px;
 }
 .dl-button {
   box-sizing: border-box;
@@ -138,4 +129,34 @@ footer {
 .footer-links li {
   display: inline-block;
   margin-right: 30px;
+  font-size: 14px;
+  color: #888;
+}
+.footer-links li a {
+  font-weight: normal;
+  color: #333;
+}
+.footer-links li a:hover {
+  text-decoration: underline;
+}
+.footer-links li.footer-text {
+  margin-right: 60px;
+}
+
+@media screen and (max-width:800px){
+  .dl-button {
+    /*padding: 7px 10px;*/
+    /*font-size: 12px;*/
+  }
+  .dl-button.dl-main {
+    /*padding: 10px 20px;*/
+    /*font-size: 14px;*/
+  }
+  .container {
+    flex-direction: column;
+    padding: 0;
+  }
+  .container .screenshot {
+    padding: 0 0 30px 0;
+  }
 }
